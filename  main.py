@@ -1,6 +1,5 @@
 from fastapi import FastAPI
-from api import webhook
+from api.webhook import router  # Suponiendo que tienes el webhook en api/webhook.py
 
 app = FastAPI()
-
-app.include_router(webhook.router)
+app.include_router(router)
