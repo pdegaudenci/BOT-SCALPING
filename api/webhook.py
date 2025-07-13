@@ -1,10 +1,10 @@
 from flask import Flask, request, jsonify
 import openai
 
-# 🚨 Solo para pruebas. No usar esta clave en producción ni en repos públicos.
+# 🚨 Solo para pruebas. No compartir ni subir esta clave.
 openai.api_key = "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"
 
-app = Flask(__name__)
+app = Flask(__name__)  # <-- variable reconocida por Vercel como WSGI entrypoint
 
 def validar_con_gpt(data):
     prompt = f"""
