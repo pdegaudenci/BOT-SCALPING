@@ -9,9 +9,12 @@ class handler(BaseHTTPRequestHandler):
 
     def do_POST(self):
         try:
-            content_length = int(self.headers['Content-Length'])
-            post_data = self.rfile.read(content_length)
+            content_length = int(self.headers.get('Content-Length', 0))
+            if content_length == 0:
+                raise ValueError("Cuerpo vacío")
+            post_data = self.rfile.read(content_length).decode('utf-8')
             payload = json.loads(post_data)
+
 
             prompt = f"""
 Eres un analista experto en scalping de criptomonedas. Evalúa la siguiente señal recibida:
