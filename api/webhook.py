@@ -1,31 +1,12 @@
-from fastapi import FastAPI, Request
-from fastapi.responses import JSONResponse
+from flask import Flask, request, jsonify
 import openai
-from mangum import Mangum
 
-# 🚨 Solo para pruebas. No subir esta clave a GitHub ni dejarla en producción.
+# 🚨 Solo para pruebas. No usar esta clave en producción ni en repos públicos.
 openai.api_key = "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"
 
-app = FastAPI()
+app = Flask(__name__)
 
-@app.post("/api/webhook")
-async def receive_alert(request: Request):
-    data = await request.json()
-    print("📩 Alerta recibida:", data)
-
-    try:
-        gpt_result = await validar_con_gpt(data)
-        return JSONResponse(content={
-            "status": "ok",
-            "gpt_result": gpt_result
-        })
-    except Exception as e:
-        return JSONResponse(content={
-            "status": "error",
-            "message": str(e)
-        }, status_code=500)
-
-async def validar_con_gpt(data):
+def validar_con_gpt(data):
     prompt = f"""
 Eres un analista experto en scalping de criptomonedas. Evalúa la siguiente señal recibida:
 
@@ -45,9 +26,14 @@ Devuelve únicamente un JSON con este formato:
         messages=[{"role": "user", "content": prompt}],
         temperature=0.3
     )
+    return response.choices[0].message["content"]
 
-    result_text = response.choices[0].message["content"]
-    return result_text
-
-# Esto es lo que Vercel necesita
-handler = Mangum(app)
+@app.route("/api/webhook", methods=["POST"])
+def webhook():
+    try:
+        data = request.get_json()
+        print("📩 Alerta recibida:", data)
+        gpt_result = validar_con_gpt(data)
+        return jsonify({"status": "ok", "gpt_result": gpt_result}), 200
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
