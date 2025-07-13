@@ -9,7 +9,6 @@ class handler(BaseHTTPRequestHandler):
 
     def do_POST(self):
         try:
-            # Leer y parsear el cuerpo JSON
             content_length = int(self.headers['Content-Length'])
             post_data = self.rfile.read(content_length)
             payload = json.loads(post_data)
