@@ -1,10 +1,29 @@
 from flask import Flask, request, jsonify
 import openai
 
-# 🚨 Solo para pruebas. No compartir ni subir esta clave.
+# Solo para pruebas locales. Nunca publiques tu clave en un repo público
 openai.api_key = "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"
 
-app = Flask(__name__)  # <-- variable reconocida por Vercel como WSGI entrypoint
+app = Flask(__name__)
+
+@app.route("/api/webhook", methods=["POST"])
+def receive_alert():
+    try:
+        data = request.json
+        print("📩 Alerta recibida:", data)
+
+        result = validar_con_gpt(data)
+
+        return jsonify({
+            "status": "ok",
+            "gpt_result": result
+        })
+
+    except Exception as e:
+        return jsonify({
+            "status": "error",
+            "message": str(e)
+        }), 500
 
 def validar_con_gpt(data):
     prompt = f"""
@@ -26,14 +45,5 @@ Devuelve únicamente un JSON con este formato:
         messages=[{"role": "user", "content": prompt}],
         temperature=0.3
     )
-    return response.choices[0].message["content"]
 
-@app.route("/api/webhook", methods=["POST"])
-def webhook():
-    try:
-        data = request.get_json()
-        print("📩 Alerta recibida:", data)
-        gpt_result = validar_con_gpt(data)
-        return jsonify({"status": "ok", "gpt_result": gpt_result}), 200
-    except Exception as e:
-        return jsonify({"status": "error", "message": str(e)}), 500
+    return response.choices[0].message["content"]
