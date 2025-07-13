@@ -1,38 +1,55 @@
-
 from http.server import BaseHTTPRequestHandler
 import json
+import openai
+
+# 🚨 Clave API expuesta (solo para pruebas)
+openai.api_key = "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"
 
 class handler(BaseHTTPRequestHandler):
+
     def do_POST(self):
-        content_length = int(self.headers.get('Content-Length', 0))
-        post_data = self.rfile.read(content_length)
         try:
-            data = json.loads(post_data.decode('utf-8'))
-            print("📩 Alerta recibida:", data)
+            # Leer y parsear el cuerpo JSON
+            content_length = int(self.headers['Content-Length'])
+            post_data = self.rfile.read(content_length)
+            payload = json.loads(post_data)
 
-            # Simular validación con OpenAI
-            gpt_result = {
-                "validar": True,
-                "probabilidad": 80,
-                "sl": 162.5,
-                "tp": 164.7,
-                "razon": "Cruce de EMAs y MACD confirmado, volumen fuerte y RSI > 50"
-            }
+            prompt = f"""
+Eres un analista experto en scalping de criptomonedas. Evalúa la siguiente señal recibida:
 
-            response = {
-                "status": "ok",
-                "gpt_result": gpt_result
-            }
-            response_bytes = json.dumps(response).encode('utf-8')
+{json.dumps(payload)}
+
+Devuelve únicamente un JSON con este formato:
+{{
+  "validar": true,
+  "probabilidad": 80,
+  "sl": 162.5,
+  "tp": 164.7,
+  "razon": "Cruce de EMAs y MACD confirmado, volumen fuerte y RSI > 50"
+}}
+"""
+
+            response = openai.ChatCompletion.create(
+                model="gpt-4",
+                messages=[{"role": "user", "content": prompt}],
+                temperature=0.3
+            )
+
+            result = response.choices[0].message.content.strip()
 
             self.send_response(200)
-            self.send_header('Content-type', 'application/json')
+            self.send_header('Content-type','application/json')
             self.end_headers()
-            self.wfile.write(response_bytes)
+            self.wfile.write(json.dumps({
+                "status": "ok",
+                "gpt_result": result
+            }).encode())
 
         except Exception as e:
             self.send_response(500)
-            self.send_header('Content-type', 'application/json')
+            self.send_header('Content-type','application/json')
             self.end_headers()
-            error_response = {"status": "error", "message": str(e)}
-            self.wfile.write(json.dumps(error_response).encode('utf-8'))
+            self.wfile.write(json.dumps({
+                "status": "error",
+                "message": str(e)
+            }).encode())
