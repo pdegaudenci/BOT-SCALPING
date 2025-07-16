@@ -13,7 +13,7 @@ ultima_validacion = None
 ultimo_timestamp = None
 ultima_senal = None
 
-
+# Análisis de contexto en segundo plano
 def analizar_contexto(payload):
     prompt_contexto = f"""
 Eres un analista técnico de criptomonedas. Con base en los siguientes indicadores, describe la situación actual del mercado de forma objetiva para mostrar en un dashboard informativo:
@@ -28,19 +28,24 @@ Devuelve un JSON con este formato:
 }}
 """
     try:
+        print("\n📤 Enviando a GPT (contexto):")
+        print(json.dumps(payload, indent=2))
+
         response = openai.ChatCompletion.create(
             model="gpt-3.5-turbo",
             messages=[{"role": "user", "content": prompt_contexto}],
             temperature=0.3
         )
+
         result = json.loads(response.choices[0].message.content.strip())
         contexto_actual.update(result)
-        print("\n📤 Enviando a GPT (contexto):")
-        print(json.dumps(payload, indent=2))
+
         print("\n🧠 Respuesta de GPT (contexto):")
-        print(response.choices[0].message.content.strip())
+        print(json.dumps(result, indent=2))
+
     except Exception as e:
         contexto_actual["resumen"] = f"Error al generar análisis: {str(e)}"
+        print("\n❌ Error GPT (contexto):", e)
 
 
 class handler(BaseHTTPRequestHandler):
@@ -58,11 +63,14 @@ class handler(BaseHTTPRequestHandler):
             data = self.rfile.read(length).decode('utf-8')
             payload = json.loads(data)
 
+            print("\n📩 Señal recibida (POST):")
+            print(json.dumps(payload, indent=2))
+
             entrada = payload.get("entrada")
             entrada = entrada.lower() if isinstance(entrada, str) else None
             result_validacion = None
 
-            # Guardar la última señal recibida
+            # Guardar señal y timestamp
             ultima_senal = payload
             ultimo_timestamp = datetime.utcnow().isoformat() + "Z"
 
@@ -83,61 +91,66 @@ Devuelve solo JSON:
   "precio": {payload.get("precio", 0)}
 }}
 """
+                print("\n📤 Enviando a GPT (validación):")
+                print(json.dumps(payload, indent=2))
+
                 response = openai.ChatCompletion.create(
                     model="gpt-3.5-turbo",
                     messages=[{"role": "user", "content": prompt}],
                     temperature=0.3
                 )
+
                 result_validacion = json.loads(response.choices[0].message.content.strip())
                 ultima_validacion = result_validacion
 
-            # Siempre analiza el contexto
+                print("\n🧠 Respuesta de GPT (validación):")
+                print(json.dumps(result_validacion, indent=2))
+
+            # Lanzar análisis de contexto en segundo plano
             threading.Thread(target=analizar_contexto, args=(payload,)).start()
 
-            # ✅ Siempre respondemos con la misma estructura
-            self.send_response(200)
-            self.send_header('Content-type', 'application/json')
-            self.send_header('Access-Control-Allow-Origin', FRONTEND_ORIGIN)
-            self.end_headers()
-            self.wfile.write(json.dumps({
+            # Enviar respuesta al frontend
+            response_data = {
                 "status": "ok",
                 "timestamp": ultimo_timestamp,
                 "validacion": result_validacion,
                 "contexto": contexto_actual,
                 "senal": ultima_senal
-            }).encode())
+            }
+
+            self.send_response(200)
+            self.send_header('Content-type', 'application/json')
+            self.send_header('Access-Control-Allow-Origin', FRONTEND_ORIGIN)
+            self.end_headers()
+            self.wfile.write(json.dumps(response_data).encode())
+
+            print("\n✅ Respuesta enviada al frontend (POST):")
+            print(json.dumps(response_data, indent=2))
 
         except Exception as e:
+            print("\n❌ Error en POST:", str(e))
             self.send_response(500)
             self.send_header('Content-type', 'application/json')
             self.send_header('Access-Control-Allow-Origin', FRONTEND_ORIGIN)
             self.end_headers()
             self.wfile.write(json.dumps({"error": str(e)}).encode())
-        # Después de validar señal (en do_POST)
-        print("\n📤 Enviando a GPT (validación):")
-        print(json.dumps(payload, indent=2))
-        print("\n🧠 Respuesta de GPT (validación):")
-        print(response.choices[0].message.content.strip())
-
 
     def do_GET(self):
         global ultima_validacion, contexto_actual, ultimo_timestamp, ultima_senal
-        self.send_response(200)
-        self.send_header('Content-type', 'application/json')
-        self.send_header('Access-Control-Allow-Origin', FRONTEND_ORIGIN)
-        self.end_headers()
-        self.wfile.write(json.dumps({
+
+        response_data = {
             "status": "ok",
             "timestamp": ultimo_timestamp,
             "validacion": ultima_validacion,
             "contexto": contexto_actual,
             "senal": ultima_senal
-        }).encode())
-        print("\n📦 Enviando al frontend:")
-        print(json.dumps({
-            "status": "ok",
-            "timestamp": ultimo_timestamp,
-            "validacion": result_validacion,
-            "contexto": contexto_actual,
-            "senal": ultima_senal
-        }, indent=2))
+        }
+
+        self.send_response(200)
+        self.send_header('Content-type', 'application/json')
+        self.send_header('Access-Control-Allow-Origin', FRONTEND_ORIGIN)
+        self.end_headers()
+        self.wfile.write(json.dumps(response_data).encode())
+
+        print("\n📦 Respuesta enviada al frontend (GET):")
+        print(json.dumps(response_data, indent=2))
