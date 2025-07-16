@@ -29,7 +29,7 @@ Devuelve un JSON con este formato:
 """
     try:
         response = openai.ChatCompletion.create(
-            model="gpt-4",
+            model="gpt-3.5-turbo",
             messages=[{"role": "user", "content": prompt_contexto}],
             temperature=0.3
         )
@@ -77,7 +77,7 @@ Devuelve solo JSON:
 }}
 """
                 response = openai.ChatCompletion.create(
-                    model="gpt-4",
+                    model="gpt-3.5-turbo",
                     messages=[{"role": "user", "content": prompt}],
                     temperature=0.3
                 )
