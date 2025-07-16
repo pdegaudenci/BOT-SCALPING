@@ -53,11 +53,14 @@ class handler(BaseHTTPRequestHandler):
             length = int(self.headers['Content-Length'])
             data = self.rfile.read(length).decode('utf-8')
             payload = json.loads(data)
-            entrada = payload.get("entrada", "").lower()
+
+            entrada = payload.get("entrada")
+            entrada = entrada.lower() if isinstance(entrada, str) else None
             result_validacion = None
 
             # Guardar la última señal recibida
             ultima_senal = payload
+            ultimo_timestamp = datetime.utcnow().isoformat() + "Z"
 
             if entrada in ["long", "short"]:
                 prompt = f"""
@@ -83,32 +86,35 @@ Devuelve solo JSON:
                 )
                 result_validacion = json.loads(response.choices[0].message.content.strip())
                 ultima_validacion = result_validacion
-                ultimo_timestamp = datetime.utcnow().isoformat() + "Z"
-                threading.Thread(target=analizar_contexto, args=(payload,)).start()
-            else:
-                threading.Thread(target=analizar_contexto, args=(payload,)).start()
 
+            # Siempre analiza el contexto
+            threading.Thread(target=analizar_contexto, args=(payload,)).start()
+
+            # ✅ Siempre respondemos con la misma estructura
             self.send_response(200)
-            self.send_header('Content-type','application/json')
+            self.send_header('Content-type', 'application/json')
             self.send_header('Access-Control-Allow-Origin', FRONTEND_ORIGIN)
             self.end_headers()
             self.wfile.write(json.dumps({
                 "status": "ok",
                 "timestamp": ultimo_timestamp,
                 "validacion": result_validacion,
-                "contexto": contexto_actual if not entrada else None
+                "contexto": contexto_actual,
+                "senal": ultima_senal
             }).encode())
+
         except Exception as e:
             self.send_response(500)
-            self.send_header('Content-type','application/json')
+            self.send_header('Content-type', 'application/json')
             self.send_header('Access-Control-Allow-Origin', FRONTEND_ORIGIN)
             self.end_headers()
             self.wfile.write(json.dumps({"error": str(e)}).encode())
 
+
     def do_GET(self):
         global ultima_validacion, contexto_actual, ultimo_timestamp, ultima_senal
         self.send_response(200)
-        self.send_header('Content-type','application/json')
+        self.send_header('Content-type', 'application/json')
         self.send_header('Access-Control-Allow-Origin', FRONTEND_ORIGIN)
         self.end_headers()
         self.wfile.write(json.dumps({
