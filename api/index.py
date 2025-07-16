@@ -4,8 +4,10 @@ import openai
 import threading
 from datetime import datetime
 
+# 🔑 Clave de API GPT personalizada
 openai.api_key = "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"
 
+# 🧠 Estado en memoria
 contexto_actual = {}
 ultima_validacion = None
 ultimo_timestamp = None
@@ -32,12 +34,12 @@ Devuelve un JSON con este formato:
         result = json.loads(response.choices[0].message.content.strip())
         contexto_actual.update(result)
     except Exception as e:
-        contexto_actual["resumen"] = f"Error: {str(e)}"
+        contexto_actual["resumen"] = f"Error al generar análisis: {str(e)}"
 
 class handler(BaseHTTPRequestHandler):
     def do_OPTIONS(self):
         self.send_response(204)
-        self.send_header('Access-Control-Allow-Origin', 'https://scalping-dashboard.vercel.app')
+        self.send_header('Access-Control-Allow-Origin', '*')
         self.send_header('Access-Control-Allow-Methods', 'POST, GET, OPTIONS')
         self.send_header('Access-Control-Allow-Headers', 'Content-Type')
         self.end_headers()
@@ -76,13 +78,16 @@ Devuelve solo JSON:
                 result_validacion = json.loads(response.choices[0].message.content.strip())
                 ultima_validacion = result_validacion
                 ultimo_timestamp = datetime.utcnow().isoformat() + "Z"
+
+                # analizar el contexto luego
                 threading.Thread(target=analizar_contexto, args=(payload,)).start()
             else:
+                # solo analizar contexto
                 threading.Thread(target=analizar_contexto, args=(payload,)).start()
 
             self.send_response(200)
             self.send_header('Content-type','application/json')
-            self.send_header('Access-Control-Allow-Origin', 'https://scalping-dashboard.vercel.app')
+            self.send_header('Access-Control-Allow-Origin', '*')
             self.end_headers()
             self.wfile.write(json.dumps({
                 "status": "ok",
@@ -93,7 +98,7 @@ Devuelve solo JSON:
         except Exception as e:
             self.send_response(500)
             self.send_header('Content-type','application/json')
-            self.send_header('Access-Control-Allow-Origin', 'https://scalping-dashboard.vercel.app')
+            self.send_header('Access-Control-Allow-Origin', '*')
             self.end_headers()
             self.wfile.write(json.dumps({"error": str(e)}).encode())
 
@@ -101,7 +106,7 @@ Devuelve solo JSON:
         global ultima_validacion, contexto_actual, ultimo_timestamp
         self.send_response(200)
         self.send_header('Content-type','application/json')
-        self.send_header('Access-Control-Allow-Origin', 'https://scalping-dashboard.vercel.app')
+        self.send_header('Access-Control-Allow-Origin', '*')
         self.end_headers()
         self.wfile.write(json.dumps({
             "status": "ok",
