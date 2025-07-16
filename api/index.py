@@ -35,6 +35,10 @@ Devuelve un JSON con este formato:
         )
         result = json.loads(response.choices[0].message.content.strip())
         contexto_actual.update(result)
+        print("\n📤 Enviando a GPT (contexto):")
+        print(json.dumps(payload, indent=2))
+        print("\n🧠 Respuesta de GPT (contexto):")
+        print(response.choices[0].message.content.strip())
     except Exception as e:
         contexto_actual["resumen"] = f"Error al generar análisis: {str(e)}"
 
@@ -109,6 +113,11 @@ Devuelve solo JSON:
             self.send_header('Access-Control-Allow-Origin', FRONTEND_ORIGIN)
             self.end_headers()
             self.wfile.write(json.dumps({"error": str(e)}).encode())
+        # Después de validar señal (en do_POST)
+        print("\n📤 Enviando a GPT (validación):")
+        print(json.dumps(payload, indent=2))
+        print("\n🧠 Respuesta de GPT (validación):")
+        print(response.choices[0].message.content.strip())
 
 
     def do_GET(self):
@@ -124,3 +133,11 @@ Devuelve solo JSON:
             "contexto": contexto_actual,
             "senal": ultima_senal
         }).encode())
+        print("\n📦 Enviando al frontend:")
+        print(json.dumps({
+            "status": "ok",
+            "timestamp": ultimo_timestamp,
+            "validacion": result_validacion,
+            "contexto": contexto_actual,
+            "senal": ultima_senal
+        }, indent=2))
