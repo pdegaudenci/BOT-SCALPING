@@ -11,6 +11,8 @@ FRONTEND_ORIGIN = "https://bot-scalping.vercel.app"
 contexto_actual = {}
 ultima_validacion = None
 ultimo_timestamp = None
+ultima_senal = None
+
 
 def analizar_contexto(payload):
     prompt_contexto = f"""
@@ -36,6 +38,7 @@ Devuelve un JSON con este formato:
     except Exception as e:
         contexto_actual["resumen"] = f"Error al generar análisis: {str(e)}"
 
+
 class handler(BaseHTTPRequestHandler):
     def do_OPTIONS(self):
         self.send_response(204)
@@ -45,13 +48,16 @@ class handler(BaseHTTPRequestHandler):
         self.end_headers()
 
     def do_POST(self):
-        global ultima_validacion, contexto_actual, ultimo_timestamp
+        global ultima_validacion, contexto_actual, ultimo_timestamp, ultima_senal
         try:
             length = int(self.headers['Content-Length'])
             data = self.rfile.read(length).decode('utf-8')
             payload = json.loads(data)
             entrada = payload.get("entrada", "").lower()
             result_validacion = None
+
+            # Guardar la última señal recibida
+            ultima_senal = payload
 
             if entrada in ["long", "short"]:
                 prompt = f"""
@@ -100,7 +106,7 @@ Devuelve solo JSON:
             self.wfile.write(json.dumps({"error": str(e)}).encode())
 
     def do_GET(self):
-        global ultima_validacion, contexto_actual, ultimo_timestamp
+        global ultima_validacion, contexto_actual, ultimo_timestamp, ultima_senal
         self.send_response(200)
         self.send_header('Content-type','application/json')
         self.send_header('Access-Control-Allow-Origin', FRONTEND_ORIGIN)
@@ -109,5 +115,6 @@ Devuelve solo JSON:
             "status": "ok",
             "timestamp": ultimo_timestamp,
             "validacion": ultima_validacion,
-            "contexto": contexto_actual
+            "contexto": contexto_actual,
+            "senal": ultima_senal
         }).encode())
