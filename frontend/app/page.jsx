@@ -8,11 +8,15 @@ export default function Page() {
 
   useEffect(() => {
     const fetchData = async () => {
-      const res = await fetch("https://bot-scalping-4r9136659-pdegaudencis-projects.vercel.app/api/index");
-      const data = await res.json();
-      setTimestamp(data.timestamp);
-      setValidacion(data.validacion);
-      setContexto(data.contexto);
+      try {
+        const res = await fetch("/api/index"); // ✅ CORREGIDO: ruta relativa
+        const data = await res.json();
+        setTimestamp(data.timestamp);
+        setValidacion(data.validacion);
+        setContexto(data.contexto);
+      } catch (err) {
+        console.error("❌ Error al obtener datos del backend:", err);
+      }
     };
     fetchData();
     const interval = setInterval(fetchData, 5000);
@@ -26,7 +30,9 @@ export default function Page() {
 
       {validacion ? (
         <div className="border rounded p-4 shadow bg-green-50">
-          <h2 className="text-lg font-semibold">✅ Señal Validada: {validacion.entrada.toUpperCase()}</h2>
+          <h2 className="text-lg font-semibold">
+            ✅ Señal Validada: {validacion.entrada?.toUpperCase()}
+          </h2>
           <p><strong>Precio:</strong> {validacion.precio}</p>
           <p><strong>SL:</strong> {validacion.sl} | <strong>TP:</strong> {validacion.tp}</p>
           <p><strong>Probabilidad:</strong> {validacion.probabilidad}%</p>
