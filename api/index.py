@@ -108,10 +108,8 @@ Devuelve solo JSON:
             else:
                 print("⚠️ No se detectó señal válida ('long' o 'short')")
 
-            # ✅ Realiza el análisis de contexto directamente (sin threading)
             analizar_contexto(payload)
 
-            # Enviar respuesta al frontend
             response_data = {
                 "status": "ok",
                 "timestamp": ultimo_timestamp,
@@ -141,6 +139,42 @@ Devuelve solo JSON:
     def do_GET(self):
         global ultima_validacion, contexto_actual, ultimo_timestamp, ultima_senal
 
+        # ✅ Ruta especial para verificar estado de GPT
+        if self.path == "/api/ping":
+            try:
+                print("\n🔍 Verificando conexión con OpenAI GPT...")
+
+                response = openai.ChatCompletion.create(
+                    model="gpt-3.5-turbo",
+                    messages=[{"role": "user", "content": "¿Estás disponible?"}],
+                    temperature=0,
+                    max_tokens=10
+                )
+                mensaje = response.choices[0].message.content.strip()
+                print("✅ GPT respondió:", mensaje)
+
+                self.send_response(200)
+                self.send_header('Content-type', 'application/json')
+                self.send_header('Access-Control-Allow-Origin', FRONTEND_ORIGIN)
+                self.end_headers()
+                self.wfile.write(json.dumps({
+                    "gpt_status": "ok",
+                    "mensaje": mensaje
+                }).encode())
+            except Exception as e:
+                print("❌ Error de conexión con GPT:", str(e))
+                print(traceback.format_exc())
+                self.send_response(500)
+                self.send_header('Content-type', 'application/json')
+                self.send_header('Access-Control-Allow-Origin', FRONTEND_ORIGIN)
+                self.end_headers()
+                self.wfile.write(json.dumps({
+                    "gpt_status": "error",
+                    "error": str(e)
+                }).encode())
+            return
+
+        # ✅ Ruta normal para dashboard
         response_data = {
             "status": "ok",
             "timestamp": ultimo_timestamp,
