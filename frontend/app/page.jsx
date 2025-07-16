@@ -2,11 +2,11 @@
 import React, { useEffect, useState } from "react";
 
 export default function Page() {
-  const [validacion, setValidacion] = useState<any>(null);
-  const [contexto, setContexto] = useState<any>(null);
+  const [validacion, setValidacion] = useState(null);
+  const [contexto, setContexto] = useState(null);
   const [timestamp, setTimestamp] = useState("");
-  const [senal, setSenal] = useState<any>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [senal, setSenal] = useState(null);
+  const [error, setError] = useState(null);
 
   const fetchData = async () => {
     const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "/api/index";
@@ -26,7 +26,6 @@ export default function Page() {
       setSenal(data.senal || null);
       setError(null);
 
-      // Logs individuales para debugging detallado
       if (data.validacion) {
         console.log("📥 Señal validada:");
         console.log(data.validacion);
