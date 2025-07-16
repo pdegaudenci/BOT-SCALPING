@@ -7,10 +7,12 @@ export default function Page() {
   const [timestamp, setTimestamp] = useState("");
   const [senal, setSenal] = useState(null);
   const [error, setError] = useState(null);
+  const [estadoGpt, setEstadoGpt] = useState("verificando"); // "ok", "error", "verificando"
+
+  const BACKEND_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL?.replace("/api/index", "") || "";
 
   const fetchData = async () => {
-    const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "/api/index";
-
+    const BACKEND_URL = `${BACKEND_BASE_URL}/api/index`;
     console.log("📡 Solicitando datos desde:", BACKEND_URL);
 
     try {
@@ -25,40 +27,52 @@ export default function Page() {
       setContexto(data.contexto || null);
       setSenal(data.senal || null);
       setError(null);
-
-      if (data.validacion) {
-        console.log("📥 Señal validada:");
-        console.log(data.validacion);
-      } else {
-        console.log("ℹ️ No se recibió validación de señal.");
-      }
-
-      if (data.contexto) {
-        console.log("📥 Contexto del mercado:");
-        console.log(data.contexto);
-      }
-
-      if (data.senal) {
-        console.log("📥 Última señal recibida:");
-        console.log(data.senal);
-      }
-
     } catch (err) {
       console.error("❌ Error al obtener datos del backend:", err);
       setError("No se pudo conectar con el backend.");
     }
   };
 
+  const verificarEstadoGpt = async () => {
+    const PING_URL = `${BACKEND_BASE_URL}/api/ping`;
+    console.log("🔍 Verificando conexión con GPT en:", PING_URL);
+
+    try {
+      const res = await fetch(PING_URL);
+      if (!res.ok) throw new Error("Error de conexión");
+      const data = await res.json();
+      console.log("✅ GPT disponible:", data);
+      setEstadoGpt("ok");
+    } catch (e) {
+      console.error("❌ GPT no disponible:", e);
+      setEstadoGpt("error");
+    }
+  };
+
   useEffect(() => {
     fetchData();
-    const interval = setInterval(fetchData, 15000); // 🔁 Actualiza cada 15 segundos
-    return () => clearInterval(interval);
+    verificarEstadoGpt();
+
+    const intervalData = setInterval(fetchData, 15000); // 🔁 actualiza datos
+    const intervalPing = setInterval(verificarEstadoGpt, 30000); // 🔁 verifica GPT
+
+    return () => {
+      clearInterval(intervalData);
+      clearInterval(intervalPing);
+    };
   }, []);
+
+  const renderGptStatus = () => {
+    if (estadoGpt === "ok") return <span className="text-green-600">🟢 GPT disponible</span>;
+    if (estadoGpt === "error") return <span className="text-red-600">🔴 GPT no disponible</span>;
+    return <span className="text-yellow-600">🟡 Verificando conexión con GPT...</span>;
+  };
 
   return (
     <main className="p-4 space-y-4 max-w-xl mx-auto">
       <h1 className="text-2xl font-bold">📈 Dashboard de Scalping</h1>
       <p className="text-sm text-gray-400">Actualizado: {timestamp}</p>
+      <p className="text-sm">{renderGptStatus()}</p>
 
       {error && (
         <div className="text-red-600 font-semibold">⚠️ {error}</div>

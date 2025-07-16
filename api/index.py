@@ -1,8 +1,8 @@
 from http.server import BaseHTTPRequestHandler
 import json
 import openai
-import threading
 from datetime import datetime
+import traceback
 
 openai.api_key = "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"
 
@@ -13,7 +13,7 @@ ultima_validacion = None
 ultimo_timestamp = None
 ultima_senal = None
 
-# Análisis de contexto en segundo plano
+
 def analizar_contexto(payload):
     prompt_contexto = f"""
 Eres un analista técnico de criptomonedas. Con base en los siguientes indicadores, describe la situación actual del mercado de forma objetiva para mostrar en un dashboard informativo:
@@ -44,8 +44,9 @@ Devuelve un JSON con este formato:
         print(json.dumps(result, indent=2))
 
     except Exception as e:
-        contexto_actual["resumen"] = f"Error al generar análisis: {str(e)}"
-        print("\n❌ Error GPT (contexto):", e)
+        contexto_actual["resumen"] = "Error al conectar con OpenAI. Reintentar más tarde."
+        print("\n❌ Error GPT (contexto):", str(e))
+        print(traceback.format_exc())
 
 
 class handler(BaseHTTPRequestHandler):
@@ -70,7 +71,6 @@ class handler(BaseHTTPRequestHandler):
             entrada = entrada.lower() if isinstance(entrada, str) else None
             result_validacion = None
 
-            # Guardar señal y timestamp
             ultima_senal = payload
             ultimo_timestamp = datetime.utcnow().isoformat() + "Z"
 
@@ -105,15 +105,17 @@ Devuelve solo JSON:
 
                 print("\n🧠 Respuesta de GPT (validación):")
                 print(json.dumps(result_validacion, indent=2))
+            else:
+                print("⚠️ No se detectó señal válida ('long' o 'short')")
 
-            # Lanzar análisis de contexto en segundo plano
-            threading.Thread(target=analizar_contexto, args=(payload,)).start()
+            # ✅ Realiza el análisis de contexto directamente (sin threading)
+            analizar_contexto(payload)
 
             # Enviar respuesta al frontend
             response_data = {
                 "status": "ok",
                 "timestamp": ultimo_timestamp,
-                "validacion": result_validacion,
+                "validacion": ultima_validacion,
                 "contexto": contexto_actual,
                 "senal": ultima_senal
             }
@@ -129,6 +131,7 @@ Devuelve solo JSON:
 
         except Exception as e:
             print("\n❌ Error en POST:", str(e))
+            print(traceback.format_exc())
             self.send_response(500)
             self.send_header('Content-type', 'application/json')
             self.send_header('Access-Control-Allow-Origin', FRONTEND_ORIGIN)
