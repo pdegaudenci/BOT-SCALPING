@@ -7,7 +7,7 @@ export default function Page() {
   const [timestamp, setTimestamp] = useState("");
   const [senal, setSenal] = useState(null);
   const [error, setError] = useState(null);
-  const [estadoGpt, setEstadoGpt] = useState("verificando"); // "ok", "error", "verificando"
+  const [estadoGpt, setEstadoGpt] = useState("verificando");
 
   const BACKEND_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL?.replace("/api/index", "") || "";
 
@@ -53,8 +53,8 @@ export default function Page() {
     fetchData();
     verificarEstadoGpt();
 
-    const intervalData = setInterval(fetchData, 15000); // 🔁 actualiza datos
-    const intervalPing = setInterval(verificarEstadoGpt, 30000); // 🔁 verifica GPT
+    const intervalData = setInterval(fetchData, 15000);
+    const intervalPing = setInterval(verificarEstadoGpt, 30000);
 
     return () => {
       clearInterval(intervalData);
@@ -111,6 +111,19 @@ export default function Page() {
           <pre className="text-xs whitespace-pre-wrap">
             {JSON.stringify(senal, null, 2)}
           </pre>
+        </div>
+      )}
+
+      {senal?.velas_patrones && (
+        <div className="border rounded p-4 shadow bg-white">
+          <h2 className="text-lg font-semibold">🕯️ Patrones en las últimas 10 velas</h2>
+          <ul className="text-sm space-y-1">
+            {senal.velas_patrones.map((p, idx) => (
+              <li key={idx}>
+                <strong>{p.time}:</strong> {p.pattern}
+              </li>
+            ))}
+          </ul>
         </div>
       )}
     </main>

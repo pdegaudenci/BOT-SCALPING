@@ -4,8 +4,7 @@ import openai
 from datetime import datetime
 import traceback
 
-openai.api_key = "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"
-
+openai.api_key = "TU_API_KEY_AQUI"
 FRONTEND_ORIGIN = "https://bot-scalping.vercel.app"
 
 contexto_actual = {}
@@ -139,7 +138,6 @@ Devuelve solo JSON:
     def do_GET(self):
         global ultima_validacion, contexto_actual, ultimo_timestamp, ultima_senal
 
-        # ✅ Ruta especial para verificar estado de GPT
         if self.path == "/api/ping":
             try:
                 print("\n🔍 Verificando conexión con OpenAI GPT...")
@@ -174,7 +172,6 @@ Devuelve solo JSON:
                 }).encode())
             return
 
-        # ✅ Ruta normal para dashboard
         response_data = {
             "status": "ok",
             "timestamp": ultimo_timestamp,
