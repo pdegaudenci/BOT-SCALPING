@@ -1,5 +1,6 @@
 "use client";
 import React, { useEffect, useState } from "react";
+import { ResponsiveContainer, ComposedChart, XAxis, YAxis, Tooltip, Bar } from "recharts";
 
 export default function Page() {
   const [validacion, setValidacion] = useState(null);
@@ -68,6 +69,38 @@ export default function Page() {
     return <span className="text-yellow-600">🟡 Verificando conexión con GPT...</span>;
   };
 
+  const renderCandlestickChart = () => {
+    if (!senal?.velas_patrones) return null;
+
+    const formattedData = senal.velas_patrones.map(v => ({
+      name: v.time.slice(11, 16),
+      open: v.open,
+      close: v.close,
+      high: v.high,
+      low: v.low,
+      pattern: v.pattern
+    }));
+
+    return (
+      <div className="border rounded p-4 shadow bg-white">
+        <h2 className="text-lg font-semibold">📉 Gráfico de Velas (últimas 10)</h2>
+        <ResponsiveContainer width="100%" height={300}>
+          <ComposedChart data={formattedData} margin={{ top: 20, right: 20, bottom: 0, left: 0 }}>
+            <XAxis dataKey="name" />
+            <YAxis domain={['dataMin - 1', 'dataMax + 1']} />
+            <Tooltip formatter={(value, name) => [value, name.toUpperCase()]} />
+            <Bar dataKey="high" fill="#8884d8" />
+          </ComposedChart>
+        </ResponsiveContainer>
+        <ul className="text-sm mt-2 space-y-1">
+          {formattedData.map((v, idx) => (
+            <li key={idx}><strong>{v.name}:</strong> {v.pattern}</li>
+          ))}
+        </ul>
+      </div>
+    );
+  };
+
   return (
     <main className="p-4 space-y-4 max-w-xl mx-auto">
       <h1 className="text-2xl font-bold">📈 Dashboard de Scalping</h1>
@@ -114,18 +147,7 @@ export default function Page() {
         </div>
       )}
 
-      {senal?.velas_patrones && (
-        <div className="border rounded p-4 shadow bg-white">
-          <h2 className="text-lg font-semibold">🕯️ Patrones en las últimas 10 velas</h2>
-          <ul className="text-sm space-y-1">
-            {senal.velas_patrones.map((p, idx) => (
-              <li key={idx}>
-                <strong>{p.time}:</strong> {p.pattern}
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
+      {renderCandlestickChart()}
     </main>
   );
 }
