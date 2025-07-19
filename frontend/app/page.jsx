@@ -3,9 +3,6 @@ import React, { useEffect, useState, useRef } from "react";
 import { createChart } from "lightweight-charts";
 
 export default function Page() {
-  // ──────────────────────────────────────────
-  // Estado
-  // ──────────────────────────────────────────
   const [validacion, setValidacion] = useState(null);
   const [contexto, setContexto] = useState(null);
   const [timestamp, setTimestamp] = useState("");
@@ -13,30 +10,20 @@ export default function Page() {
   const [error, setError] = useState(null);
   const [estadoGpt, setEstadoGpt] = useState("verificando");
 
-  // ──────────────────────────────────────────
-  // Refs para el gráfico
-  // ──────────────────────────────────────────
   const chartContainerRef = useRef(null);
   const chartRef = useRef(null);
   const candleSeriesRef = useRef(null);
   const lastTimestampRef = useRef("");
 
-  // ──────────────────────────────────────────
-  // Config back‑end
-  // ──────────────────────────────────────────
   const BACKEND_BASE_URL =
     process.env.NEXT_PUBLIC_BACKEND_URL?.replace("/api/index", "") || "";
 
-  // ──────────────────────────────────────────
-  // Fetch datos
-  // ──────────────────────────────────────────
   const fetchData = async () => {
     const URL = `${BACKEND_BASE_URL}/api/index`;
     try {
       const res = await fetch(URL);
       const data = await res.json();
 
-      // Solo refrescamos si hay datos nuevos
       if (data.timestamp && data.timestamp !== lastTimestampRef.current) {
         lastTimestampRef.current = data.timestamp;
         setTimestamp(data.timestamp);
@@ -45,9 +32,7 @@ export default function Page() {
         setSenal(data.senal || null);
         setError(null);
 
-        // ─── Actualizar gráfico ─────────────────────────────
-        if (candleSeriesRef.current && data.senal?.velas_patrones) {
-          // 1️⃣ Datos OHLC
+        if (typeof window !== "undefined" && candleSeriesRef.current && data.senal?.velas_patrones) {
           const candles = data.senal.velas_patrones.map((v) => ({
             time: Math.floor(new Date(v.time).getTime() / 1000),
             open: v.open,
@@ -57,7 +42,6 @@ export default function Page() {
           }));
           candleSeriesRef.current.setData(candles);
 
-          // 2️⃣ Marcadores de patrones
           const markers = data.senal.velas_patrones
             .filter((v) => v.pattern && v.pattern !== "-")
             .map((v) => ({
@@ -89,9 +73,6 @@ export default function Page() {
     }
   };
 
-  // ──────────────────────────────────────────
-  // Inicializar y refrescar datos
-  // ──────────────────────────────────────────
   useEffect(() => {
     fetchData();
     verificarEstadoGpt();
@@ -103,13 +84,14 @@ export default function Page() {
     };
   }, []);
 
-  // ──────────────────────────────────────────
-  // Crear gráfico una vez montado
-  // ──────────────────────────────────────────
   useEffect(() => {
-    if (!chartContainerRef.current) return;
+    if (
+      typeof window === "undefined" ||
+      !chartContainerRef.current ||
+      chartRef.current
+    ) return;
 
-    chartRef.current = createChart(chartContainerRef.current, {
+    const chart = createChart(chartContainerRef.current, {
       width: chartContainerRef.current.clientWidth,
       height: 300,
       layout: { background: { color: "#fff" }, textColor: "#000" },
@@ -123,33 +105,30 @@ export default function Page() {
       },
     });
 
-    candleSeriesRef.current = chartRef.current.addCandlestickSeries();
+    chartRef.current = chart;
+    candleSeriesRef.current = chart.addCandlestickSeries();
 
-    // Ajustar tamaño automáticamente al re‑dimensionar
     const handleResize = () => {
-      chartRef.current.applyOptions({
+      chart.applyOptions({
         width: chartContainerRef.current.clientWidth,
       });
     };
+
     window.addEventListener("resize", handleResize);
     return () => {
       window.removeEventListener("resize", handleResize);
-      chartRef.current.remove();
+      chart.remove();
+      chartRef.current = null;
+      candleSeriesRef.current = null;
     };
   }, []);
 
-  // ──────────────────────────────────────────
-  // Helpers UI
-  // ──────────────────────────────────────────
   const gptStatus = () => {
     if (estadoGpt === "ok") return <span className="text-green-600">🟢 GPT disponible</span>;
     if (estadoGpt === "error") return <span className="text-red-600">🔴 GPT no disponible</span>;
     return <span className="text-yellow-600">🟡 Verificando GPT...</span>;
   };
 
-  // ──────────────────────────────────────────
-  // Render
-  // ──────────────────────────────────────────
   return (
     <main className="p-4 space-y-4 max-w-xl mx-auto">
       <h1 className="text-2xl font-bold">📈 Dashboard de Scalping</h1>
@@ -192,10 +171,9 @@ export default function Page() {
         </div>
       )}
 
-      {/* GRÁFICO */}
       <div>
         <h2 className="text-lg font-semibold">📉 Gráfico de Velas + Patrones</h2>
-        <div ref={chartContainerRef} className="w-full border shadow rounded" />
+        <div ref={chartContainerRef} className="w-full h-[300px] border shadow rounded" />
       </div>
     </main>
   );
