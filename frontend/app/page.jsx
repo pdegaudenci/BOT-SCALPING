@@ -6,6 +6,7 @@ import {
   XAxis,
   YAxis,
   Tooltip,
+  Customized,
 } from "recharts";
 
 export default function Page() {
@@ -16,7 +17,7 @@ export default function Page() {
   const [error, setError] = useState(null);
   const [estadoGpt, setEstadoGpt] = useState("verificando");
 
-  const lastTimestampRef = useRef(""); // ← almacena último timestamp mostrado
+  const lastTimestampRef = useRef("");
 
   const BACKEND_BASE_URL =
     process.env.NEXT_PUBLIC_BACKEND_URL?.replace("/api/index", "") || "";
@@ -27,7 +28,6 @@ export default function Page() {
       const res = await fetch(BACKEND_URL);
       const data = await res.json();
 
-      // Si no hay nuevos datos, no actualizamos
       if (data.timestamp && data.timestamp !== lastTimestampRef.current) {
         lastTimestampRef.current = data.timestamp;
         setTimestamp(data.timestamp || "");
@@ -76,13 +76,14 @@ export default function Page() {
   const renderCandlestickChart = () => {
     if (!senal?.velas_patrones) return null;
 
-    const formattedData = senal.velas_patrones.map((v) => ({
+    const formattedData = senal.velas_patrones.slice(-10).map((v) => ({
       name: v.time.slice(11, 16),
       open: v.open,
       close: v.close,
       high: v.high,
       low: v.low,
       pattern: v.pattern,
+      tipo: v.tipo,
       color: v.close >= v.open ? "#4caf50" : "#f44336",
     }));
 
@@ -97,33 +98,58 @@ export default function Page() {
               formatter={(value, name) => [value, name.toUpperCase()]}
               labelFormatter={(label) => `⏰ Hora: ${label}`}
             />
-            {formattedData.map((entry, index) => {
-              const bodyHeight = Math.abs(entry.open - entry.close);
-              return (
-                <g key={index}>
-                  <rect
-                    x={index * 40 + 20}
-                    y={300 - (entry.high - entry.low) * 2}
-                    width={2}
-                    height={(entry.high - entry.low) * 2}
-                    fill={entry.color}
-                  />
-                  <rect
-                    x={index * 40 + 18}
-                    y={300 - (Math.max(entry.open, entry.close) - entry.low) * 2}
-                    width={6}
-                    height={bodyHeight * 2}
-                    fill={entry.color}
-                  />
-                </g>
-              );
-            })}
+            <Customized
+              component={({ xAxisMap, yAxisMap, data, height }) =>
+                data.map((entry, index) => {
+                  const x = xAxisMap.x.scale(index) + xAxisMap.x.bandwidth / 4;
+                  const highY = yAxisMap.left.scale(entry.high);
+                  const lowY = yAxisMap.left.scale(entry.low);
+                  const bodyTop = yAxisMap.left.scale(Math.max(entry.open, entry.close));
+                  const bodyBottom = yAxisMap.left.scale(Math.min(entry.open, entry.close));
+                  const bodyHeight = Math.abs(bodyBottom - bodyTop);
+
+                  return (
+                    <g key={index}>
+                      {/* Línea alta-baja */}
+                      <line
+                        x1={x + 5}
+                        x2={x + 5}
+                        y1={highY}
+                        y2={lowY}
+                        stroke={entry.color}
+                      />
+                      {/* Cuerpo */}
+                      <rect
+                        x={x}
+                        y={bodyTop}
+                        width={10}
+                        height={Math.max(1, bodyHeight)}
+                        fill={entry.color}
+                      />
+                      {/* Patrón */}
+                      {entry.pattern && entry.pattern !== "-" && (
+                        <text
+                          x={x}
+                          y={highY - 10}
+                          fill="#000"
+                          fontSize={10}
+                          textAnchor="middle"
+                        >
+                          📌
+                        </text>
+                      )}
+                    </g>
+                  );
+                })
+              }
+            />
           </ComposedChart>
         </ResponsiveContainer>
+
         <ul className="text-sm mt-2 space-y-1">
           {formattedData.map((v, idx) => (
             <li key={idx}>
-              <strong>{v.name}:</strong> {v.pattern}
+              <strong>{v.name}:</strong> {v.pattern} ({v.tipo})
             </li>
           ))}
         </ul>
