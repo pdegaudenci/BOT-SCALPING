@@ -118,39 +118,58 @@ export default function Page() {
       <div className="border rounded p-4 shadow bg-white">
         <h2 className="text-lg font-semibold">📉 Gráfico de Velas (últimas)</h2>
         <ResponsiveContainer width="100%" height={300}>
-          <ComposedChart
-            data={formattedData}
-            margin={{ top: 10, right: 30, bottom: 0, left: 0 }}
-          >
-            <XAxis dataKey="name" />
-            <YAxis
-              domain={[
-                (dataMin) => Math.floor(dataMin - 1),
-                (dataMax) => Math.ceil(dataMax + 1),
-              ]}
-            />
-            <Tooltip
-              formatter={(value, name) => [value, name.toUpperCase()]}
-              labelFormatter={(label) => `⏰ Hora: ${label}`}
-            />
-            <Customized
-              component={({ xAxisMap, yAxisMap }) => {
-                const x = (i) => {
-                  const scale = xAxisMap[0]?.scale;
-                  return scale ? scale(i) : 0;
-                };
-                const y = yAxisMap[0]?.scale;
-                return (
-                  <>
-                    {y &&
-                      formattedData.map((d, i) => (
-                        <CustomCandle key={i} x={x} y={y} payload={d} />
-                      ))}
-                  </>
-                );
-              }}
-            />
-          </ComposedChart>
+        <ComposedChart
+  data={formattedData}
+  margin={{ top: 10, right: 30, bottom: 0, left: 0 }}
+>
+  <XAxis dataKey="name" id="x" />
+  <YAxis
+    id="y"
+    domain={[
+      (dataMin) => Math.floor(dataMin - 1),
+      (dataMax) => Math.ceil(dataMax + 1),
+    ]}
+  />
+  <Tooltip
+    formatter={(value, name) => [value, name.toUpperCase()]}
+    labelFormatter={(label) => `⏰ Hora: ${label}`}
+  />
+  <Customized
+    component={({ xAxisMap, yAxisMap }) => {
+      const xScale = xAxisMap["x"]?.scale;
+      const yScale = yAxisMap["y"]?.scale;
+
+      if (!xScale || !yScale) return null;
+
+      return (
+        <>
+          {formattedData.map((d, i) => (
+            <g key={i}>
+              {/* Línea alta-baja */}
+              <line
+                x1={xScale(d.index)}
+                x2={xScale(d.index)}
+                y1={yScale(d.high)}
+                y2={yScale(d.low)}
+                stroke={d.color}
+                strokeWidth={2}
+              />
+              {/* Cuerpo de vela */}
+              <rect
+                x={xScale(d.index) - 4}
+                y={Math.min(yScale(d.open), yScale(d.close))}
+                width={8}
+                height={Math.abs(yScale(d.open) - yScale(d.close))}
+                fill={d.color}
+              />
+            </g>
+          ))}
+        </>
+      );
+    }}
+  />
+</ComposedChart>
+
         </ResponsiveContainer>
 
         <ul className="text-sm mt-2 space-y-1">
