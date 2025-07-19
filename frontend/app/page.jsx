@@ -1,13 +1,6 @@
 "use client";
 import React, { useEffect, useState, useRef } from "react";
-import {
-  ResponsiveContainer,
-  ComposedChart,
-  XAxis,
-  YAxis,
-  Tooltip,
-  Customized,
-} from "recharts";
+import { createChart } from "lightweight-charts";
 
 export default function Page() {
   const [validacion, setValidacion] = useState(null);
@@ -17,6 +10,9 @@ export default function Page() {
   const [error, setError] = useState(null);
   const [estadoGpt, setEstadoGpt] = useState("verificando");
 
+  const chartContainerRef = useRef(null);
+  const chartInstanceRef = useRef(null);
+  const candleSeriesRef = useRef(null);
   const lastTimestampRef = useRef("");
 
   const BACKEND_BASE_URL =
@@ -34,6 +30,18 @@ export default function Page() {
         setContexto(data.contexto || null);
         setSenal(data.senal || null);
         setError(null);
+
+        // Actualizar gráfico de velas
+        if (data.senal?.velas_patrones && candleSeriesRef.current) {
+          const candles = data.senal.velas_patrones.map((v) => ({
+            time: Math.floor(new Date(v.time).getTime() / 1000),
+            open: v.open,
+            high: v.high,
+            low: v.low,
+            close: v.close,
+          }));
+          candleSeriesRef.current.setData(candles);
+        }
       } else {
         console.log("⏸️ Datos sin cambios, no se actualiza UI");
       }
@@ -58,110 +66,53 @@ export default function Page() {
   useEffect(() => {
     fetchData();
     verificarEstadoGpt();
+
     const intervalData = setInterval(fetchData, 15000);
     const intervalPing = setInterval(verificarEstadoGpt, 30000);
+
     return () => {
       clearInterval(intervalData);
       clearInterval(intervalPing);
     };
   }, []);
 
+  useEffect(() => {
+    if (!chartContainerRef.current) return;
+
+    // Crear el gráfico
+    chartInstanceRef.current = createChart(chartContainerRef.current, {
+      width: chartContainerRef.current.clientWidth,
+      height: 300,
+      layout: {
+        background: { color: "#ffffff" },
+        textColor: "#000",
+      },
+      grid: {
+        vertLines: { color: "#eee" },
+        horzLines: { color: "#eee" },
+      },
+      crosshair: {
+        mode: 0,
+      },
+      priceScale: {
+        borderColor: "#ccc",
+      },
+      timeScale: {
+        borderColor: "#ccc",
+        timeVisible: true,
+        secondsVisible: false,
+      },
+    });
+
+    candleSeriesRef.current = chartInstanceRef.current.addCandlestickSeries();
+
+    return () => chartInstanceRef.current?.remove();
+  }, []);
+
   const renderGptStatus = () => {
     if (estadoGpt === "ok") return <span className="text-green-600">🟢 GPT disponible</span>;
     if (estadoGpt === "error") return <span className="text-red-600">🔴 GPT no disponible</span>;
     return <span className="text-yellow-600">🟡 Verificando conexión con GPT...</span>;
-  };
-
-  const renderCandlestickChart = () => {
-    if (!senal?.velas_patrones) return null;
-
-    const formattedData = senal.velas_patrones.map((v, index) => ({
-      ...v,
-      name: v.time.slice(11, 16),
-      color: v.close >= v.open ? "#4caf50" : "#f44336",
-      index,
-    }));
-
-    const CustomCandle = ({ x, y, payload }) => {
-      const bodyTop = Math.min(payload.open, payload.close);
-      const bodyBottom = Math.max(payload.open, payload.close);
-      const centerX = x(payload.index);
-      const openY = y(payload.open);
-      const closeY = y(payload.close);
-      const highY = y(payload.high);
-      const lowY = y(payload.low);
-
-      return (
-        <g>
-          {/* Línea alta-baja */}
-          <line
-            x1={centerX}
-            x2={centerX}
-            y1={highY}
-            y2={lowY}
-            stroke={payload.color}
-            strokeWidth={2}
-          />
-          {/* Cuerpo de la vela */}
-          <rect
-            x={centerX - 4}
-            y={Math.min(openY, closeY)}
-            width={8}
-            height={Math.abs(closeY - openY)}
-            fill={payload.color}
-          />
-        </g>
-      );
-    };
-
-    return (
-      <div className="border rounded p-4 shadow bg-white">
-        <h2 className="text-lg font-semibold">📉 Gráfico de Velas (últimas)</h2>
-        <ResponsiveContainer width="100%" height={300}>
-          <ComposedChart
-            data={formattedData}
-            margin={{ top: 10, right: 30, bottom: 0, left: 0 }}
-          >
-            <XAxis dataKey="name" />
-            <YAxis
-              domain={[
-                (dataMin) => Math.floor(dataMin - 1),
-                (dataMax) => Math.ceil(dataMax + 1),
-              ]}
-            />
-            <Tooltip
-              formatter={(value, name) => [value, name.toUpperCase()]}
-              labelFormatter={(label) => `⏰ Hora: ${label}`}
-            />
-            <Customized
-              component={({ xAxisMap, yAxisMap }) => {
-                const x = (i) => {
-                  const scale = xAxisMap[0]?.scale;
-                  return scale ? scale(i) : 0;
-                };
-                const y = yAxisMap[0]?.scale;
-                return (
-                  <>
-                    {y &&
-                      formattedData.map((d, i) => (
-                        <CustomCandle key={i} x={x} y={y} payload={d} />
-                      ))}
-                  </>
-                );
-              }}
-            />
-          </ComposedChart>
-        </ResponsiveContainer>
-
-        <ul className="text-sm mt-2 space-y-1">
-          {formattedData.map((v, idx) => (
-            <li key={idx}>
-              <strong>{v.name}:</strong> {v.pattern} ({v.tipo})
-            </li>
-          ))}
-        </ul>
-      </div>
-    );
   };
 
   return (
@@ -204,7 +155,10 @@ export default function Page() {
         </div>
       )}
 
-      {renderCandlestickChart()}
+      <div>
+        <h2 className="text-lg font-semibold">📉 Gráfico de Velas</h2>
+        <div ref={chartContainerRef} className="w-full border shadow rounded" />
+      </div>
     </main>
   );
 }
