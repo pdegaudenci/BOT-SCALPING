@@ -48,7 +48,7 @@ export default function Page() {
     try {
       const res = await fetch(PING_URL);
       if (!res.ok) throw new Error("Error de conexión");
-      const data = await res.json();
+      await res.json();
       setEstadoGpt("ok");
     } catch (e) {
       setEstadoGpt("error");
@@ -67,9 +67,13 @@ export default function Page() {
   }, []);
 
   const renderGptStatus = () => {
-    if (estadoGpt === "ok") return <span className="text-green-600">🟢 GPT disponible</span>;
-    if (estadoGpt === "error") return <span className="text-red-600">🔴 GPT no disponible</span>;
-    return <span className="text-yellow-600">🟡 Verificando conexión con GPT...</span>;
+    if (estadoGpt === "ok")
+      return <span className="text-green-600">🟢 GPT disponible</span>;
+    if (estadoGpt === "error")
+      return <span className="text-red-600">🔴 GPT no disponible</span>;
+    return (
+      <span className="text-yellow-600">🟡 Verificando conexión con GPT...</span>
+    );
   };
 
   const renderCandlestickChart = () => {
@@ -77,14 +81,11 @@ export default function Page() {
 
     const formattedData = senal.velas_patrones.map((v, index) => ({
       ...v,
-      name: v.time.slice(11, 16),
-      color: v.close >= v.open ? "#4caf50" : "#f44336",
       index,
+      color: v.close >= v.open ? "#4caf50" : "#f44336",
     }));
 
     const CustomCandle = ({ x, y, payload }) => {
-      const bodyTop = Math.min(payload.open, payload.close);
-      const bodyBottom = Math.max(payload.open, payload.close);
       const centerX = x(payload.index);
       const openY = y(payload.open);
       const closeY = y(payload.close);
@@ -93,21 +94,19 @@ export default function Page() {
 
       return (
         <g>
-          {/* Línea alta-baja */}
           <line
             x1={centerX}
             x2={centerX}
             y1={highY}
             y2={lowY}
             stroke={payload.color}
-            strokeWidth={2}
+            strokeWidth={1}
           />
-          {/* Cuerpo de la vela */}
           <rect
-            x={centerX - 4}
+            x={centerX - 3}
             y={Math.min(openY, closeY)}
-            width={8}
-            height={Math.abs(closeY - openY)}
+            width={6}
+            height={Math.max(1, Math.abs(closeY - openY))}
             fill={payload.color}
           />
         </g>
@@ -118,64 +117,48 @@ export default function Page() {
       <div className="border rounded p-4 shadow bg-white">
         <h2 className="text-lg font-semibold">📉 Gráfico de Velas (últimas)</h2>
         <ResponsiveContainer width="100%" height={300}>
-        <ComposedChart
-  data={formattedData}
-  margin={{ top: 10, right: 30, bottom: 0, left: 0 }}
->
-  <XAxis dataKey="name" id="x" />
-  <YAxis
-    id="y"
-    domain={[
-      (dataMin) => Math.floor(dataMin - 1),
-      (dataMax) => Math.ceil(dataMax + 1),
-    ]}
-  />
-  <Tooltip
-    formatter={(value, name) => [value, name.toUpperCase()]}
-    labelFormatter={(label) => `⏰ Hora: ${label}`}
-  />
-  <Customized
-    component={({ xAxisMap, yAxisMap }) => {
-      const xScale = xAxisMap["x"]?.scale;
-      const yScale = yAxisMap["y"]?.scale;
-
-      if (!xScale || !yScale) return null;
-
-      return (
-        <>
-          {formattedData.map((d, i) => (
-            <g key={i}>
-              {/* Línea alta-baja */}
-              <line
-                x1={xScale(d.index)}
-                x2={xScale(d.index)}
-                y1={yScale(d.high)}
-                y2={yScale(d.low)}
-                stroke={d.color}
-                strokeWidth={2}
-              />
-              {/* Cuerpo de vela */}
-              <rect
-                x={xScale(d.index) - 4}
-                y={Math.min(yScale(d.open), yScale(d.close))}
-                width={8}
-                height={Math.abs(yScale(d.open) - yScale(d.close))}
-                fill={d.color}
-              />
-            </g>
-          ))}
-        </>
-      );
-    }}
-  />
-</ComposedChart>
-
+          <ComposedChart
+            data={formattedData}
+            margin={{ top: 10, right: 30, bottom: 0, left: 0 }}
+          >
+            <XAxis
+              dataKey="index"
+              tickFormatter={(i) => formattedData[i]?.time?.slice(11, 16)}
+              interval={Math.floor(formattedData.length / 10)}
+            />
+            <YAxis
+              domain={[
+                (dataMin) => Math.floor(dataMin - 1),
+                (dataMax) => Math.ceil(dataMax + 1),
+              ]}
+            />
+            <Tooltip
+              formatter={(value, name) => [value, name.toUpperCase()]}
+              labelFormatter={(label) =>
+                `⏰ ${formattedData[label]?.time?.slice(11, 16)}`
+              }
+            />
+            <Customized
+              component={({ xAxisMap, yAxisMap }) => {
+                const xScale = xAxisMap[Object.keys(xAxisMap)[0]]?.scale;
+                const yScale = yAxisMap[Object.keys(yAxisMap)[0]]?.scale;
+                if (!xScale || !yScale) return null;
+                return (
+                  <>
+                    {formattedData.map((d, i) => (
+                      <CustomCandle key={i} x={xScale} y={yScale} payload={d} />
+                    ))}
+                  </>
+                );
+              }}
+            />
+          </ComposedChart>
         </ResponsiveContainer>
 
         <ul className="text-sm mt-2 space-y-1">
           {formattedData.map((v, idx) => (
             <li key={idx}>
-              <strong>{v.name}:</strong> {v.pattern} ({v.tipo})
+              <strong>{v.time?.slice(11, 16)}:</strong> {v.pattern} ({v.tipo})
             </li>
           ))}
         </ul>
@@ -196,30 +179,52 @@ export default function Page() {
           <h2 className="text-lg font-semibold">
             ✅ Señal Validada: {validacion?.entrada?.toUpperCase()}
           </h2>
-          <p><strong>Precio:</strong> {validacion?.precio ?? "N/A"}</p>
-          <p><strong>SL:</strong> {validacion?.sl ?? "N/A"} | <strong>TP:</strong> {validacion?.tp ?? "N/A"}</p>
-          <p><strong>Probabilidad:</strong> {validacion?.probabilidad ?? "N/A"}%</p>
-          <p><strong>Razón:</strong> {validacion?.razon ?? "N/A"}</p>
+          <p>
+            <strong>Precio:</strong> {validacion?.precio ?? "N/A"}
+          </p>
+          <p>
+            <strong>SL:</strong> {validacion?.sl ?? "N/A"} |{" "}
+            <strong>TP:</strong> {validacion?.tp ?? "N/A"}
+          </p>
+          <p>
+            <strong>Probabilidad:</strong> {validacion?.probabilidad ?? "N/A"}%
+          </p>
+          <p>
+            <strong>Razón:</strong> {validacion?.razon ?? "N/A"}
+          </p>
         </div>
       ) : contexto ? (
-        <p className="italic text-yellow-600">No hay señal en esta vela, pero se ha generado un análisis del mercado.</p>
+        <p className="italic text-yellow-600">
+          No hay señal en esta vela, pero se ha generado un análisis del
+          mercado.
+        </p>
       ) : (
-        <p className="italic text-gray-500">⏳ Esperando datos del backend...</p>
+        <p className="italic text-gray-500">
+          ⏳ Esperando datos del backend...
+        </p>
       )}
 
       {contexto && (
         <div className="border rounded p-4 shadow bg-blue-50">
           <h2 className="text-lg font-semibold">📊 Análisis del Mercado</h2>
-          <p><strong>Resumen:</strong> {contexto?.resumen ?? "N/A"}</p>
-          <p><strong>Riesgo:</strong> {contexto?.riesgo ?? "N/A"}</p>
-          <p><strong>Recomendación:</strong> {contexto?.recomendacion ?? "N/A"}</p>
+          <p>
+            <strong>Resumen:</strong> {contexto?.resumen ?? "N/A"}
+          </p>
+          <p>
+            <strong>Riesgo:</strong> {contexto?.riesgo ?? "N/A"}
+          </p>
+          <p>
+            <strong>Recomendación:</strong> {contexto?.recomendacion ?? "N/A"}
+          </p>
         </div>
       )}
 
       {senal && (
         <div className="border rounded p-4 shadow bg-gray-50">
           <h2 className="text-lg font-semibold">🧮 Indicadores (última vela)</h2>
-          <pre className="text-xs whitespace-pre-wrap">{JSON.stringify(senal, null, 2)}</pre>
+          <pre className="text-xs whitespace-pre-wrap">
+            {JSON.stringify(senal, null, 2)}
+          </pre>
         </div>
       )}
 
