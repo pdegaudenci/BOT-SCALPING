@@ -7,12 +7,25 @@ import traceback
 openai.api_key = "TU_API_KEY_AQUI"
 FRONTEND_ORIGIN = "https://bot-scalping.vercel.app"
 
+# Datos en memoria
 contexto_actual = {}
 ultima_validacion = None
 ultimo_timestamp = None
 ultima_senal = None
 ultimas_velas = []
 
+# Datos por defecto para primer render
+datos_por_defecto = {
+    "timestamp": None,
+    "validacion": None,
+    "contexto": {
+        "resumen": "No hay datos aún.",
+        "riesgo": "-",
+        "recomendacion": "-"
+    },
+    "senal": None,
+    "ultimas_velas": []
+}
 
 def analizar_contexto(payload):
     prompt_contexto = f"""
@@ -45,9 +58,10 @@ Devuelve un JSON con este formato:
 
     except Exception as e:
         contexto_actual["resumen"] = "Error al conectar con OpenAI. Reintentar más tarde."
+        contexto_actual["riesgo"] = "-"
+        contexto_actual["recomendacion"] = "-"
         print("\n❌ Error GPT (contexto):", str(e))
         print(traceback.format_exc())
-
 
 class handler(BaseHTTPRequestHandler):
     def do_OPTIONS(self):
@@ -71,6 +85,7 @@ class handler(BaseHTTPRequestHandler):
             entrada = entrada.lower() if isinstance(entrada, str) else None
             result_validacion = None
 
+            # Guardar datos recibidos
             ultima_senal = payload
             ultimo_timestamp = datetime.utcnow().isoformat() + "Z"
             ultimas_velas = payload.get("ultimas_velas", [])
@@ -111,23 +126,18 @@ Devuelve solo JSON:
 
             analizar_contexto(payload)
 
-            response_data = {
+            self.send_response(200)
+            self.send_header('Content-type', 'application/json')
+            self.send_header('Access-Control-Allow-Origin', FRONTEND_ORIGIN)
+            self.end_headers()
+            self.wfile.write(json.dumps({
                 "status": "ok",
                 "timestamp": ultimo_timestamp,
                 "validacion": ultima_validacion,
                 "contexto": contexto_actual,
                 "senal": ultima_senal,
                 "ultimas_velas": ultimas_velas
-            }
-
-            self.send_response(200)
-            self.send_header('Content-type', 'application/json')
-            self.send_header('Access-Control-Allow-Origin', FRONTEND_ORIGIN)
-            self.end_headers()
-            self.wfile.write(json.dumps(response_data).encode())
-
-            print("\n✅ Respuesta enviada al frontend (POST):")
-            print(json.dumps(response_data, indent=2))
+            }).encode())
 
         except Exception as e:
             print("\n❌ Error en POST:", str(e))
@@ -144,7 +154,6 @@ Devuelve solo JSON:
         if self.path == "/api/ping":
             try:
                 print("\n🔍 Verificando conexión con OpenAI GPT...")
-
                 response = openai.ChatCompletion.create(
                     model="gpt-3.5-turbo",
                     messages=[{"role": "user", "content": "¿Estás disponible?"}],
@@ -152,8 +161,6 @@ Devuelve solo JSON:
                     max_tokens=10
                 )
                 mensaje = response.choices[0].message.content.strip()
-                print("✅ GPT respondió:", mensaje)
-
                 self.send_response(200)
                 self.send_header('Content-type', 'application/json')
                 self.send_header('Access-Control-Allow-Origin', FRONTEND_ORIGIN)
@@ -163,8 +170,6 @@ Devuelve solo JSON:
                     "mensaje": mensaje
                 }).encode())
             except Exception as e:
-                print("❌ Error de conexión con GPT:", str(e))
-                print(traceback.format_exc())
                 self.send_response(500)
                 self.send_header('Content-type', 'application/json')
                 self.send_header('Access-Control-Allow-Origin', FRONTEND_ORIGIN)
@@ -175,13 +180,14 @@ Devuelve solo JSON:
                 }).encode())
             return
 
+        # Si no hay datos reales, usar datos por defecto
         response_data = {
             "status": "ok",
-            "timestamp": ultimo_timestamp,
-            "validacion": ultima_validacion,
-            "contexto": contexto_actual,
-            "senal": ultima_senal,
-            "ultimas_velas": ultimas_velas
+            "timestamp": ultimo_timestamp or datos_por_defecto["timestamp"],
+            "validacion": ultima_validacion or datos_por_defecto["validacion"],
+            "contexto": contexto_actual or datos_por_defecto["contexto"],
+            "senal": ultima_senal or datos_por_defecto["senal"],
+            "ultimas_velas": ultimas_velas or datos_por_defecto["ultimas_velas"]
         }
 
         self.send_response(200)
