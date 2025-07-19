@@ -11,6 +11,7 @@ contexto_actual = {}
 ultima_validacion = None
 ultimo_timestamp = None
 ultima_senal = None
+ultimas_velas = []
 
 
 def analizar_contexto(payload):
@@ -57,7 +58,7 @@ class handler(BaseHTTPRequestHandler):
         self.end_headers()
 
     def do_POST(self):
-        global ultima_validacion, contexto_actual, ultimo_timestamp, ultima_senal
+        global ultima_validacion, contexto_actual, ultimo_timestamp, ultima_senal, ultimas_velas
         try:
             length = int(self.headers['Content-Length'])
             data = self.rfile.read(length).decode('utf-8')
@@ -72,6 +73,7 @@ class handler(BaseHTTPRequestHandler):
 
             ultima_senal = payload
             ultimo_timestamp = datetime.utcnow().isoformat() + "Z"
+            ultimas_velas = payload.get("ultimas_velas", [])
 
             if entrada in ["long", "short"]:
                 prompt = f"""
@@ -114,7 +116,8 @@ Devuelve solo JSON:
                 "timestamp": ultimo_timestamp,
                 "validacion": ultima_validacion,
                 "contexto": contexto_actual,
-                "senal": ultima_senal
+                "senal": ultima_senal,
+                "ultimas_velas": ultimas_velas
             }
 
             self.send_response(200)
@@ -136,7 +139,7 @@ Devuelve solo JSON:
             self.wfile.write(json.dumps({"error": str(e)}).encode())
 
     def do_GET(self):
-        global ultima_validacion, contexto_actual, ultimo_timestamp, ultima_senal
+        global ultima_validacion, contexto_actual, ultimo_timestamp, ultima_senal, ultimas_velas
 
         if self.path == "/api/ping":
             try:
@@ -177,7 +180,8 @@ Devuelve solo JSON:
             "timestamp": ultimo_timestamp,
             "validacion": ultima_validacion,
             "contexto": contexto_actual,
-            "senal": ultima_senal
+            "senal": ultima_senal,
+            "ultimas_velas": ultimas_velas
         }
 
         self.send_response(200)
