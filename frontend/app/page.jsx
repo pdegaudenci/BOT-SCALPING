@@ -160,24 +160,74 @@ const renderCandlestickChart = () => {
               `⏰ ${formattedData[label]?.time?.slice(11, 16)}`
             }
           />
-          <Customized
-            component={({ xAxisMap, yAxisMap }) => {
-              const xScale = xAxisMap[Object.keys(xAxisMap)[0]]?.scale;
-              const yScale = yAxisMap[Object.keys(yAxisMap)[0]]?.scale;
-              if (!xScale || !yScale) {
-                console.error("❌ xScale o yScale no definidos");
-                return null;
-              }
+<Customized
+  component={({ xAxisMap, yAxisMap, height }) => {
+    const xKey = Object.keys(xAxisMap)[0];
+    const yKey = Object.keys(yAxisMap)[0];
 
-              return (
-                <>
-                  {formattedData.map((d, i) => (
-                    <CustomCandle key={i} x={xScale} y={yScale} payload={d} />
-                  ))}
-                </>
-              );
-            }}
-          />
+    const xScale = xAxisMap[xKey]?.scale;
+    const yScale = yAxisMap[yKey]?.scale;
+
+    if (typeof xScale !== "function" || typeof yScale !== "function") {
+      console.warn("⚠️ Escalas no disponibles aún. Esperando nuevo render.");
+      return null;
+    }
+
+    return (
+      <>
+        {formattedData.map((d, i) => {
+          // Validamos que los valores sean numéricos
+          if (
+            typeof d.open !== "number" ||
+            typeof d.close !== "number" ||
+            typeof d.high !== "number" ||
+            typeof d.low !== "number"
+          ) {
+            console.error(`❌ Vela ${i} con datos inválidos`, d);
+            return null;
+          }
+
+          const centerX = xScale(d.index);
+          const openY = yScale(d.open);
+          const closeY = yScale(d.close);
+          const highY = yScale(d.high);
+          const lowY = yScale(d.low);
+
+          // Si alguna coordenada es NaN, no renderizamos
+          if (
+            [centerX, openY, closeY, highY, lowY].some(
+              (val) => typeof val !== "number" || isNaN(val)
+            )
+          ) {
+            console.warn(`⛔ Coordenadas inválidas para vela ${i}`);
+            return null;
+          }
+
+          return (
+            <g key={i}>
+              <line
+                x1={centerX}
+                x2={centerX}
+                y1={highY}
+                y2={lowY}
+                stroke={d.color}
+                strokeWidth={1}
+              />
+              <rect
+                x={centerX - 3}
+                y={Math.min(openY, closeY)}
+                width={6}
+                height={Math.max(1, Math.abs(closeY - openY))}
+                fill={d.color}
+              />
+            </g>
+          );
+        })}
+      </>
+    );
+  }}
+/>
+
         </ComposedChart>
       </ResponsiveContainer>
 
