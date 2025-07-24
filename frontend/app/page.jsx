@@ -76,95 +76,122 @@ export default function Page() {
     );
   };
 
-  const renderCandlestickChart = () => {
-    if (!senal?.velas_patrones) return null;
+const renderCandlestickChart = () => {
+  if (!senal?.velas_patrones || senal.velas_patrones.length === 0) {
+    console.warn("⚠️ No hay datos en senal.velas_patrones");
+    return null;
+  }
 
-    const formattedData = senal.velas_patrones.map((v, index) => ({
-      ...v,
-      index,
-      color: v.close >= v.open ? "#4caf50" : "#f44336",
-    }));
+  // Log de datos crudos
+  console.log("🟢 Datos crudos recibidos:", senal.velas_patrones);
 
-    const CustomCandle = ({ x, y, payload }) => {
-      const centerX = x(payload.index);
-      const openY = y(payload.open);
-      const closeY = y(payload.close);
-      const highY = y(payload.high);
-      const lowY = y(payload.low);
+  const formattedData = senal.velas_patrones.map((v, index) => ({
+    ...v,
+    index,
+    color: v.close >= v.open ? "#4caf50" : "#f44336",
+  }));
 
-      return (
-        <g>
-          <line
-            x1={centerX}
-            x2={centerX}
-            y1={highY}
-            y2={lowY}
-            stroke={payload.color}
-            strokeWidth={1}
-          />
-          <rect
-            x={centerX - 3}
-            y={Math.min(openY, closeY)}
-            width={6}
-            height={Math.max(1, Math.abs(closeY - openY))}
-            fill={payload.color}
-          />
-        </g>
-      );
-    };
+  // Log de datos formateados
+  console.log("📊 Datos formateados para gráfico:", formattedData);
+
+  const CustomCandle = ({ x, y, payload }) => {
+    const centerX = x(payload.index);
+    const openY = y(payload.open);
+    const closeY = y(payload.close);
+    const highY = y(payload.high);
+    const lowY = y(payload.low);
+
+    // Log por vela
+    console.log(`🕯️ Vela ${payload.index}:`, {
+      open: payload.open,
+      close: payload.close,
+      high: payload.high,
+      low: payload.low,
+      centerX,
+      openY,
+      closeY,
+      highY,
+      lowY,
+    });
 
     return (
-      <div className="border rounded p-4 shadow bg-white">
-        <h2 className="text-lg font-semibold">📉 Gráfico de Velas (últimas)</h2>
-        <ResponsiveContainer width="100%" height={300}>
-          <ComposedChart
-            data={formattedData}
-            margin={{ top: 10, right: 30, bottom: 0, left: 0 }}
-          >
-            <XAxis
-              dataKey="index"
-              tickFormatter={(i) => formattedData[i]?.time?.slice(11, 16)}
-              interval={Math.floor(formattedData.length / 10)}
-            />
-            <YAxis
-              domain={[
-                (dataMin) => Math.floor(dataMin - 1),
-                (dataMax) => Math.ceil(dataMax + 1),
-              ]}
-            />
-            <Tooltip
-              formatter={(value, name) => [value, name.toUpperCase()]}
-              labelFormatter={(label) =>
-                `⏰ ${formattedData[label]?.time?.slice(11, 16)}`
-              }
-            />
-            <Customized
-              component={({ xAxisMap, yAxisMap }) => {
-                const xScale = xAxisMap[Object.keys(xAxisMap)[0]]?.scale;
-                const yScale = yAxisMap[Object.keys(yAxisMap)[0]]?.scale;
-                if (!xScale || !yScale) return null;
-                return (
-                  <>
-                    {formattedData.map((d, i) => (
-                      <CustomCandle key={i} x={xScale} y={yScale} payload={d} />
-                    ))}
-                  </>
-                );
-              }}
-            />
-          </ComposedChart>
-        </ResponsiveContainer>
-
-        <ul className="text-sm mt-2 space-y-1">
-          {formattedData.map((v, idx) => (
-            <li key={idx}>
-              <strong>{v.time?.slice(11, 16)}:</strong> {v.pattern} ({v.tipo})
-            </li>
-          ))}
-        </ul>
-      </div>
+      <g>
+        <line
+          x1={centerX}
+          x2={centerX}
+          y1={highY}
+          y2={lowY}
+          stroke={payload.color}
+          strokeWidth={1}
+        />
+        <rect
+          x={centerX - 3}
+          y={Math.min(openY, closeY)}
+          width={6}
+          height={Math.max(1, Math.abs(closeY - openY))}
+          fill={payload.color}
+        />
+      </g>
     );
   };
+
+  return (
+    <div className="border rounded p-4 shadow bg-white">
+      <h2 className="text-lg font-semibold">📉 Gráfico de Velas (últimas)</h2>
+      <ResponsiveContainer width="100%" height={300}>
+        <ComposedChart
+          data={formattedData}
+          margin={{ top: 10, right: 30, bottom: 0, left: 0 }}
+        >
+          <XAxis
+            dataKey="index"
+            tickFormatter={(i) => formattedData[i]?.time?.slice(11, 16)}
+            interval={Math.floor(formattedData.length / 10)}
+          />
+          <YAxis
+            domain={[
+              (dataMin) => Math.floor(dataMin - 1),
+              (dataMax) => Math.ceil(dataMax + 1),
+            ]}
+          />
+          <Tooltip
+            formatter={(value, name) => [value, name.toUpperCase()]}
+            labelFormatter={(label) =>
+              `⏰ ${formattedData[label]?.time?.slice(11, 16)}`
+            }
+          />
+          <Customized
+            component={({ xAxisMap, yAxisMap }) => {
+              const xScale = xAxisMap[Object.keys(xAxisMap)[0]]?.scale;
+              const yScale = yAxisMap[Object.keys(yAxisMap)[0]]?.scale;
+              if (!xScale || !yScale) {
+                console.error("❌ xScale o yScale no definidos");
+                return null;
+              }
+
+              return (
+                <>
+                  {formattedData.map((d, i) => (
+                    <CustomCandle key={i} x={xScale} y={yScale} payload={d} />
+                  ))}
+                </>
+              );
+            }}
+          />
+        </ComposedChart>
+      </ResponsiveContainer>
+
+      <ul className="text-sm mt-2 space-y-1">
+        {formattedData.map((v, idx) => (
+          <li key={idx}>
+            <strong>{v.time?.slice(11, 16)}:</strong> {v.pattern} ({v.tipo})
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+};
+
 
   return (
     <main className="p-4 space-y-4 max-w-xl mx-auto">
