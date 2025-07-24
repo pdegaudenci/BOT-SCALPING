@@ -81,7 +81,8 @@ const renderCandlestickChart = () => {
 
   const formattedData = senal.velas_patrones.map((v, index) => ({
     ...v,
-    name: v.time.slice(11, 16), // clave del eje X
+    index,
+    name: v.time.slice(11, 16),
     color: v.close >= v.open ? "#4caf50" : "#f44336",
   }));
 
@@ -89,17 +90,13 @@ const renderCandlestickChart = () => {
 
   const CustomCandle = ({ x, y, payload }) => {
     try {
-      const centerX = x(payload.name); // CORRECTO
+      const centerX = x(payload.index); // usamos index ahora
       const openY = y(payload.open);
       const closeY = y(payload.close);
       const highY = y(payload.high);
       const lowY = y(payload.low);
 
-      if (
-        [centerX, openY, closeY, highY, lowY].some((val) =>
-          isNaN(val)
-        )
-      ) {
+      if ([centerX, openY, closeY, highY, lowY].some(isNaN)) {
         console.warn("⛔ Coordenadas inválidas para vela", payload);
         return null;
       }
@@ -137,7 +134,10 @@ const renderCandlestickChart = () => {
           data={formattedData}
           margin={{ top: 10, right: 30, bottom: 0, left: 0 }}
         >
-          <XAxis dataKey="name" />
+          <XAxis
+            dataKey="index"
+            tickFormatter={(i) => formattedData[i]?.name}
+          />
           <YAxis
             domain={[
               (dataMin) => Math.floor(dataMin - 1),
@@ -146,7 +146,7 @@ const renderCandlestickChart = () => {
           />
           <Tooltip
             formatter={(value, name) => [value, name.toUpperCase()]}
-            labelFormatter={(label) => `⏰ Hora: ${label}`}
+            labelFormatter={(label) => `⏰ Hora: ${formattedData[label]?.time}`}
           />
           <Customized
             component={({ xAxisMap, yAxisMap }) => {
@@ -180,6 +180,7 @@ const renderCandlestickChart = () => {
     </div>
   );
 };
+
 
 
   return (
