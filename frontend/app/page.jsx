@@ -82,48 +82,45 @@ const renderCandlestickChart = () => {
   const formattedData = senal.velas_patrones.map((v, index) => ({
     ...v,
     index,
-    name: v.time.slice(11, 16),
+    name: v.time?.slice(11, 16),
     color: v.close >= v.open ? "#4caf50" : "#f44336",
   }));
 
-  console.log("📊 Datos formateados para gráfico:", formattedData);
-
   const CustomCandle = ({ x, y, payload }) => {
-    try {
-      const centerX = x(payload.index); // usamos index ahora
-      const openY = y(payload.open);
-      const closeY = y(payload.close);
-      const highY = y(payload.high);
-      const lowY = y(payload.low);
+    const centerX = x(payload.index);
+    const openY = y(payload.open);
+    const closeY = y(payload.close);
+    const highY = y(payload.high);
+    const lowY = y(payload.low);
 
-      if ([centerX, openY, closeY, highY, lowY].some(isNaN)) {
-        console.warn("⛔ Coordenadas inválidas para vela", payload);
-        return null;
-      }
-
-      return (
-        <g>
-          <line
-            x1={centerX}
-            x2={centerX}
-            y1={highY}
-            y2={lowY}
-            stroke={payload.color}
-            strokeWidth={1}
-          />
-          <rect
-            x={centerX - 3}
-            y={Math.min(openY, closeY)}
-            width={6}
-            height={Math.max(1, Math.abs(closeY - openY))}
-            fill={payload.color}
-          />
-        </g>
-      );
-    } catch (err) {
-      console.error("❌ Error en CustomCandle:", err, payload);
+    if (
+      [centerX, openY, closeY, highY, lowY].some(
+        (val) => typeof val !== "number" || isNaN(val)
+      )
+    ) {
+      console.warn("⛔ Coordenadas inválidas para vela", payload);
       return null;
     }
+
+    return (
+      <g>
+        <line
+          x1={centerX}
+          x2={centerX}
+          y1={highY}
+          y2={lowY}
+          stroke={payload.color}
+          strokeWidth={1}
+        />
+        <rect
+          x={centerX - 3}
+          y={Math.min(openY, closeY)}
+          width={6}
+          height={Math.max(1, Math.abs(closeY - openY))}
+          fill={payload.color}
+        />
+      </g>
+    );
   };
 
   return (
@@ -136,6 +133,8 @@ const renderCandlestickChart = () => {
         >
           <XAxis
             dataKey="index"
+            type="number"
+            domain={['dataMin', 'dataMax']}
             tickFormatter={(i) => formattedData[i]?.name}
           />
           <YAxis
@@ -146,18 +145,15 @@ const renderCandlestickChart = () => {
           />
           <Tooltip
             formatter={(value, name) => [value, name.toUpperCase()]}
-            labelFormatter={(label) => `⏰ Hora: ${formattedData[label]?.time}`}
+            labelFormatter={(label) =>
+              `⏰ ${formattedData[label]?.time?.slice(11, 16)}`
+            }
           />
           <Customized
             component={({ xAxisMap, yAxisMap }) => {
               const xScale = xAxisMap[Object.keys(xAxisMap)[0]]?.scale;
               const yScale = yAxisMap[Object.keys(yAxisMap)[0]]?.scale;
-
-              if (!xScale || !yScale) {
-                console.warn("⛔ Escalas no disponibles");
-                return null;
-              }
-
+              if (!xScale || !yScale) return null;
               return (
                 <>
                   {formattedData.map((d, i) => (
@@ -180,7 +176,6 @@ const renderCandlestickChart = () => {
     </div>
   );
 };
-
 
 
   return (
