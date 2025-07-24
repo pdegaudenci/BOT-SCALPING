@@ -82,53 +82,56 @@ const renderCandlestickChart = () => {
   const formattedData = senal.velas_patrones.map((v, index) => ({
     ...v,
     index,
-    name: v.time?.slice(11, 16), // hora como etiqueta
+    name: v.time?.slice(11, 16), // clave categórica
     color: v.close >= v.open ? "#4caf50" : "#f44336",
   }));
 
   const CustomCandle = ({ x, y, payload }) => {
-    const centerX = x(payload.name);  // usamos 'name' para escala categórica
-    const openY = y(payload.open);
-    const closeY = y(payload.close);
-    const highY = y(payload.high);
-    const lowY = y(payload.low);
+    try {
+      const centerX = x(payload.name);
+      const openY = y(payload.open);
+      const closeY = y(payload.close);
+      const highY = y(payload.high);
+      const lowY = y(payload.low);
 
-    if (
-      !isFinite(centerX) || !isFinite(openY) || !isFinite(closeY) ||
-      !isFinite(highY) || !isFinite(lowY)
-    ) {
-      console.error("⛔ Coordenadas inválidas para vela:", {
-        payload,
-        centerX,
-        openY,
-        closeY,
-        highY,
-        lowY
-      });
+      if (
+        !isFinite(centerX) || !isFinite(openY) || !isFinite(closeY) ||
+        !isFinite(highY) || !isFinite(lowY)
+      ) {
+        console.warn("⛔ Coordenadas inválidas para vela:", {
+          payload,
+          centerX,
+          openY,
+          closeY,
+          highY,
+          lowY,
+        });
+        return null;
+      }
+
+      return (
+        <g>
+          <line
+            x1={centerX}
+            x2={centerX}
+            y1={highY}
+            y2={lowY}
+            stroke={payload.color}
+            strokeWidth={1}
+          />
+          <rect
+            x={centerX - 3}
+            y={Math.min(openY, closeY)}
+            width={6}
+            height={Math.max(1, Math.abs(closeY - openY))}
+            fill={payload.color}
+          />
+        </g>
+      );
+    } catch (err) {
+      console.error("❌ Error renderizando vela:", err);
       return null;
     }
-
-    return (
-      <g>
-        {/* Línea alta-baja */}
-        <line
-          x1={centerX}
-          x2={centerX}
-          y1={highY}
-          y2={lowY}
-          stroke={payload.color}
-          strokeWidth={1}
-        />
-        {/* Cuerpo de vela */}
-        <rect
-          x={centerX - 3}
-          y={Math.min(openY, closeY)}
-          width={6}
-          height={Math.max(1, Math.abs(closeY - openY))}
-          fill={payload.color}
-        />
-      </g>
-    );
   };
 
   return (
@@ -139,10 +142,7 @@ const renderCandlestickChart = () => {
           data={formattedData}
           margin={{ top: 10, right: 30, bottom: 0, left: 0 }}
         >
-          <XAxis
-            dataKey="name"
-            type="category"
-          />
+          <XAxis dataKey="name" type="category" />
           <YAxis
             domain={[
               (dataMin) => Math.floor(dataMin - 1),
@@ -157,8 +157,10 @@ const renderCandlestickChart = () => {
             component={({ xAxisMap, yAxisMap }) => {
               const xScale = xAxisMap[Object.keys(xAxisMap)[0]]?.scale;
               const yScale = yAxisMap[Object.keys(yAxisMap)[0]]?.scale;
-
-              if (!xScale || !yScale) return null;
+              if (!xScale || !yScale) {
+                console.warn("⏳ Esperando escalas para renderizar velas...");
+                return null;
+              }
 
               return (
                 <>
