@@ -82,28 +82,35 @@ const renderCandlestickChart = () => {
   const formattedData = senal.velas_patrones.map((v, index) => ({
     ...v,
     index,
-    name: v.time?.slice(11, 16),
+    name: v.time?.slice(11, 16), // hora como etiqueta
     color: v.close >= v.open ? "#4caf50" : "#f44336",
   }));
 
   const CustomCandle = ({ x, y, payload }) => {
-    const centerX = x(payload.index);
+    const centerX = x(payload.name);  // usamos 'name' para escala categórica
     const openY = y(payload.open);
     const closeY = y(payload.close);
     const highY = y(payload.high);
     const lowY = y(payload.low);
 
     if (
-      [centerX, openY, closeY, highY, lowY].some(
-        (val) => typeof val !== "number" || isNaN(val)
-      )
+      !isFinite(centerX) || !isFinite(openY) || !isFinite(closeY) ||
+      !isFinite(highY) || !isFinite(lowY)
     ) {
-      console.warn("⛔ Coordenadas inválidas para vela", payload);
+      console.error("⛔ Coordenadas inválidas para vela:", {
+        payload,
+        centerX,
+        openY,
+        closeY,
+        highY,
+        lowY
+      });
       return null;
     }
 
     return (
       <g>
+        {/* Línea alta-baja */}
         <line
           x1={centerX}
           x2={centerX}
@@ -112,6 +119,7 @@ const renderCandlestickChart = () => {
           stroke={payload.color}
           strokeWidth={1}
         />
+        {/* Cuerpo de vela */}
         <rect
           x={centerX - 3}
           y={Math.min(openY, closeY)}
@@ -132,10 +140,8 @@ const renderCandlestickChart = () => {
           margin={{ top: 10, right: 30, bottom: 0, left: 0 }}
         >
           <XAxis
-            dataKey="index"
-            type="number"
-            domain={['dataMin', 'dataMax']}
-            tickFormatter={(i) => formattedData[i]?.name}
+            dataKey="name"
+            type="category"
           />
           <YAxis
             domain={[
@@ -145,15 +151,15 @@ const renderCandlestickChart = () => {
           />
           <Tooltip
             formatter={(value, name) => [value, name.toUpperCase()]}
-            labelFormatter={(label) =>
-              `⏰ ${formattedData[label]?.time?.slice(11, 16)}`
-            }
+            labelFormatter={(label) => `⏰ ${label}`}
           />
           <Customized
             component={({ xAxisMap, yAxisMap }) => {
               const xScale = xAxisMap[Object.keys(xAxisMap)[0]]?.scale;
               const yScale = yAxisMap[Object.keys(yAxisMap)[0]]?.scale;
+
               if (!xScale || !yScale) return null;
+
               return (
                 <>
                   {formattedData.map((d, i) => (
