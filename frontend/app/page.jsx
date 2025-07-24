@@ -77,62 +77,56 @@ export default function Page() {
   };
 
 const renderCandlestickChart = () => {
-  if (!senal?.velas_patrones || senal.velas_patrones.length === 0) {
-    console.warn("⚠️ No hay datos en senal.velas_patrones");
-    return null;
-  }
-
-  // Log de datos crudos
-  console.log("🟢 Datos crudos recibidos:", senal.velas_patrones);
+  if (!senal?.velas_patrones) return null;
 
   const formattedData = senal.velas_patrones.map((v, index) => ({
     ...v,
-    index,
+    name: v.time.slice(11, 16), // clave del eje X
     color: v.close >= v.open ? "#4caf50" : "#f44336",
   }));
 
-  // Log de datos formateados
   console.log("📊 Datos formateados para gráfico:", formattedData);
 
   const CustomCandle = ({ x, y, payload }) => {
-    const centerX = x(payload.index);
-    const openY = y(payload.open);
-    const closeY = y(payload.close);
-    const highY = y(payload.high);
-    const lowY = y(payload.low);
+    try {
+      const centerX = x(payload.name); // CORRECTO
+      const openY = y(payload.open);
+      const closeY = y(payload.close);
+      const highY = y(payload.high);
+      const lowY = y(payload.low);
 
-    // Log por vela
-    console.log(`🕯️ Vela ${payload.index}:`, {
-      open: payload.open,
-      close: payload.close,
-      high: payload.high,
-      low: payload.low,
-      centerX,
-      openY,
-      closeY,
-      highY,
-      lowY,
-    });
+      if (
+        [centerX, openY, closeY, highY, lowY].some((val) =>
+          isNaN(val)
+        )
+      ) {
+        console.warn("⛔ Coordenadas inválidas para vela", payload);
+        return null;
+      }
 
-    return (
-      <g>
-        <line
-          x1={centerX}
-          x2={centerX}
-          y1={highY}
-          y2={lowY}
-          stroke={payload.color}
-          strokeWidth={1}
-        />
-        <rect
-          x={centerX - 3}
-          y={Math.min(openY, closeY)}
-          width={6}
-          height={Math.max(1, Math.abs(closeY - openY))}
-          fill={payload.color}
-        />
-      </g>
-    );
+      return (
+        <g>
+          <line
+            x1={centerX}
+            x2={centerX}
+            y1={highY}
+            y2={lowY}
+            stroke={payload.color}
+            strokeWidth={1}
+          />
+          <rect
+            x={centerX - 3}
+            y={Math.min(openY, closeY)}
+            width={6}
+            height={Math.max(1, Math.abs(closeY - openY))}
+            fill={payload.color}
+          />
+        </g>
+      );
+    } catch (err) {
+      console.error("❌ Error en CustomCandle:", err, payload);
+      return null;
+    }
   };
 
   return (
@@ -143,11 +137,7 @@ const renderCandlestickChart = () => {
           data={formattedData}
           margin={{ top: 10, right: 30, bottom: 0, left: 0 }}
         >
-          <XAxis
-            dataKey="index"
-            tickFormatter={(i) => formattedData[i]?.time?.slice(11, 16)}
-            interval={Math.floor(formattedData.length / 10)}
-          />
+          <XAxis dataKey="name" />
           <YAxis
             domain={[
               (dataMin) => Math.floor(dataMin - 1),
@@ -156,85 +146,34 @@ const renderCandlestickChart = () => {
           />
           <Tooltip
             formatter={(value, name) => [value, name.toUpperCase()]}
-            labelFormatter={(label) =>
-              `⏰ ${formattedData[label]?.time?.slice(11, 16)}`
-            }
+            labelFormatter={(label) => `⏰ Hora: ${label}`}
           />
-<Customized
-  component={({ xAxisMap, yAxisMap, height }) => {
-    const xKey = Object.keys(xAxisMap)[0];
-    const yKey = Object.keys(yAxisMap)[0];
+          <Customized
+            component={({ xAxisMap, yAxisMap }) => {
+              const xScale = xAxisMap[Object.keys(xAxisMap)[0]]?.scale;
+              const yScale = yAxisMap[Object.keys(yAxisMap)[0]]?.scale;
 
-    const xScale = xAxisMap[xKey]?.scale;
-    const yScale = yAxisMap[yKey]?.scale;
+              if (!xScale || !yScale) {
+                console.warn("⛔ Escalas no disponibles");
+                return null;
+              }
 
-    if (typeof xScale !== "function" || typeof yScale !== "function") {
-      console.warn("⚠️ Escalas no disponibles aún. Esperando nuevo render.");
-      return null;
-    }
-
-    return (
-      <>
-        {formattedData.map((d, i) => {
-          // Validamos que los valores sean numéricos
-          if (
-            typeof d.open !== "number" ||
-            typeof d.close !== "number" ||
-            typeof d.high !== "number" ||
-            typeof d.low !== "number"
-          ) {
-            console.error(`❌ Vela ${i} con datos inválidos`, d);
-            return null;
-          }
-
-          const centerX = xScale(d.index);
-          const openY = yScale(d.open);
-          const closeY = yScale(d.close);
-          const highY = yScale(d.high);
-          const lowY = yScale(d.low);
-
-          // Si alguna coordenada es NaN, no renderizamos
-          if (
-            [centerX, openY, closeY, highY, lowY].some(
-              (val) => typeof val !== "number" || isNaN(val)
-            )
-          ) {
-            console.warn(`⛔ Coordenadas inválidas para vela ${i}`);
-            return null;
-          }
-
-          return (
-            <g key={i}>
-              <line
-                x1={centerX}
-                x2={centerX}
-                y1={highY}
-                y2={lowY}
-                stroke={d.color}
-                strokeWidth={1}
-              />
-              <rect
-                x={centerX - 3}
-                y={Math.min(openY, closeY)}
-                width={6}
-                height={Math.max(1, Math.abs(closeY - openY))}
-                fill={d.color}
-              />
-            </g>
-          );
-        })}
-      </>
-    );
-  }}
-/>
-
+              return (
+                <>
+                  {formattedData.map((d, i) => (
+                    <CustomCandle key={i} x={xScale} y={yScale} payload={d} />
+                  ))}
+                </>
+              );
+            }}
+          />
         </ComposedChart>
       </ResponsiveContainer>
 
       <ul className="text-sm mt-2 space-y-1">
         {formattedData.map((v, idx) => (
           <li key={idx}>
-            <strong>{v.time?.slice(11, 16)}:</strong> {v.pattern} ({v.tipo})
+            <strong>{v.name}:</strong> {v.pattern} ({v.tipo})
           </li>
         ))}
       </ul>
