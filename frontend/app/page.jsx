@@ -143,34 +143,35 @@ const renderCandlestickChart = () => {
           margin={{ top: 10, right: 30, bottom: 0, left: 0 }}
         >
           <XAxis dataKey="name" type="category" />
-          <YAxis
-            domain={[
-              (dataMin) => Math.floor(dataMin - 1),
-              (dataMax) => Math.ceil(dataMax + 1),
-            ]}
-          />
+         <YAxis
+  yAxisId="right"
+  domain={[
+    (dataMin: number) => Math.floor(dataMin - 1),
+    (dataMax: number) => Math.ceil(dataMax + 1),
+  ]}
+/>
+
           <Tooltip
             formatter={(value, name) => [value, name.toUpperCase()]}
             labelFormatter={(label) => `⏰ ${label}`}
           />
-          <Customized
-            component={({ xAxisMap, yAxisMap }) => {
-              const xScale = xAxisMap[Object.keys(xAxisMap)[0]]?.scale;
-              const yScale = yAxisMap[Object.keys(yAxisMap)[0]]?.scale;
-              if (!xScale || !yScale) {
-                console.warn("⏳ Esperando escalas para renderizar velas...");
-                return null;
-              }
+ <Customized
+  component={({ xAxisMap, yAxisMap }) => {
+    const xScale = xAxisMap[Object.keys(xAxisMap)[0]]?.scale;
+    const yScale = yAxisMap["right"]?.scale;
 
-              return (
-                <>
-                  {formattedData.map((d, i) => (
-                    <CustomCandle key={i} x={xScale} y={yScale} payload={d} />
-                  ))}
-                </>
-              );
-            }}
-          />
+    if (!xScale || !yScale) return null;
+
+    return (
+      <>
+        {formattedData.map((d, i) => (
+          <CustomCandle key={i} x={xScale} y={yScale} payload={d} />
+        ))}
+      </>
+    );
+  }}
+/>
+
         </ComposedChart>
       </ResponsiveContainer>
 
