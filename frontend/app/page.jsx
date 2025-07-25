@@ -16,7 +16,6 @@ export default function Page() {
   const [senal, setSenal] = useState(null);
   const [error, setError] = useState(null);
   const [estadoGpt, setEstadoGpt] = useState("verificando");
-
   const lastTimestampRef = useRef("");
 
   const BACKEND_BASE_URL =
@@ -76,131 +75,113 @@ export default function Page() {
     );
   };
 
-const renderCandlestickChart = () => {
-  if (!senal?.velas_patrones) return null;
+  const renderCandlestickChart = () => {
+    if (!senal?.velas_patrones) return null;
 
-  const formattedData = senal.velas_patrones.map((v, index) => ({
-    ...v,
-    index,
-    name: v.time?.slice(11, 16), // clave categórica
-    color: v.close >= v.open ? "#4caf50" : "#f44336",
-  }));
+    const formattedData = senal.velas_patrones.map((v, index) => ({
+      ...v,
+      index,
+      name: v.time?.slice(11, 16),
+      color: v.close >= v.open ? "#4caf50" : "#f44336",
+    }));
 
-const CustomCandle = ({ x, y, payload }) => {
-  try {
-    const centerX = x(payload.name);
-    const openY = y(payload.open);
-    const closeY = y(payload.close);
-    const highY = y(payload.high);
-    const lowY = y(payload.low);
+    const CustomCandle = ({ x, y, payload }) => {
+      try {
+        const centerX = x(payload.name);
+        const openY = y(payload.open);
+        const closeY = y(payload.close);
+        const highY = y(payload.high);
+        const lowY = y(payload.low);
 
-    if (
-      !isFinite(centerX) || !isFinite(openY) || !isFinite(closeY) ||
-      !isFinite(highY) || !isFinite(lowY)
-    ) {
-      console.error("⛔ Coordenadas inválidas para vela:", {
-        payload,
-        centerX,
-        openY,
-        closeY,
-        highY,
-        lowY
-      });
-      return null;
-    }
+        if (
+          !isFinite(centerX) || !isFinite(openY) || !isFinite(closeY) ||
+          !isFinite(highY) || !isFinite(lowY)
+        ) {
+          console.error("⛔ Coordenadas inválidas para vela:", {
+            payload,
+            centerX,
+            openY,
+            closeY,
+            highY,
+            lowY
+          });
+          return null;
+        }
 
-    return (
-      <g>
-        <line
-          x1={centerX}
-          x2={centerX}
-          y1={highY}
-          y2={lowY}
-          stroke={payload.color}
-          strokeWidth={1}
-        />
-        <rect
-          x={centerX - 3}
-          y={Math.min(openY, closeY)}
-          width={6}
-          height={Math.max(1, Math.abs(closeY - openY))}
-          fill={payload.color}
-        />
-      </g>
-    );
-  } catch (error) {
-    console.error("⚠️ Error al renderizar vela:", { error, payload });
-    return null;
-  }
-};
-
-  return (
-    <div className="border rounded p-4 shadow bg-white">
-      <h2 className="text-lg font-semibold">📉 Gráfico de Velas (últimas)</h2>
-      <ResponsiveContainer width="100%" height={300}>
-        <ComposedChart
-          data={formattedData}
-          margin={{ top: 10, right: 30, bottom: 0, left: 0 }}
-        >
-          <XAxis dataKey="name" type="category" />
-    
-<YAxis
-  yAxisId="right"
-  type="number"
-  domain={[
-    (dataMin) => Math.floor(dataMin - 1),
-    (dataMax) => Math.ceil(dataMax + 1),
-  ]}
-/>
-
-
-
-          <Tooltip
-            formatter={(value, name) => [value, name.toUpperCase()]}
-            labelFormatter={(label) => `⏰ ${label}`}
-          />
-<Customized
-  component={({ xAxisMap, yAxisMap }) => {
-    const xKey = Object.keys(xAxisMap)[0];
-    const yKey = "right"; // coincide con yAxisId
-    const xScale = xAxisMap[xKey]?.scale;
-    const yScale = yAxisMap[yKey]?.scale;
-if (!isFinite(openY)) {
-  console.error("❗ openY es NaN por:", {
-    open: payload.open,
-    escalaY: y,
-    yScale,
-    payload,
-  });
-}
-
-    if (!xScale || !yScale) return null;
+        return (
+          <g>
+            <line
+              x1={centerX}
+              x2={centerX}
+              y1={highY}
+              y2={lowY}
+              stroke={payload.color}
+              strokeWidth={1}
+            />
+            <rect
+              x={centerX - 3}
+              y={Math.min(openY, closeY)}
+              width={6}
+              height={Math.max(1, Math.abs(closeY - openY))}
+              fill={payload.color}
+            />
+          </g>
+        );
+      } catch (error) {
+        console.error("⚠️ Error al renderizar vela:", { error, payload });
+        return null;
+      }
+    };
 
     return (
-      <>
-        {formattedData.map((d, i) => (
-          <CustomCandle key={i} x={xScale} y={yScale} payload={d} />
-        ))}
-      </>
+      <div className="border rounded p-4 shadow bg-white">
+        <h2 className="text-lg font-semibold">📉 Gráfico de Velas (últimas)</h2>
+        <ResponsiveContainer width="100%" height={300}>
+          <ComposedChart
+            data={formattedData}
+            margin={{ top: 10, right: 30, bottom: 0, left: 0 }}
+          >
+            <XAxis dataKey="name" type="category" />
+            <YAxis
+              yAxisId="right"
+              type="number"
+              domain={[
+                (dataMin) => Math.floor(dataMin - 1),
+                (dataMax) => Math.ceil(dataMax + 1),
+              ]}
+            />
+            <Tooltip
+              formatter={(value, name) => [value, name.toUpperCase()]}
+              labelFormatter={(label) => `⏰ ${label}`}
+            />
+            <Customized
+              component={({ xAxisMap, yAxisMap }) => {
+                const xKey = Object.keys(xAxisMap)[0];
+                const yKey = "right";
+                const xScale = xAxisMap[xKey]?.scale;
+                const yScale = yAxisMap[yKey]?.scale;
+                if (!xScale || !yScale) return null;
+                return (
+                  <>
+                    {formattedData.map((d, i) => (
+                      <CustomCandle key={i} x={xScale} y={yScale} payload={d} />
+                    ))}
+                  </>
+                );
+              }}
+            />
+          </ComposedChart>
+        </ResponsiveContainer>
+        <ul className="text-sm mt-2 space-y-1">
+          {formattedData.map((v, idx) => (
+            <li key={idx}>
+              <strong>{v.name}:</strong> {v.pattern} ({v.tipo})
+            </li>
+          ))}
+        </ul>
+      </div>
     );
-  }}
-/>
-
-
-        </ComposedChart>
-      </ResponsiveContainer>
-
-      <ul className="text-sm mt-2 space-y-1">
-        {formattedData.map((v, idx) => (
-          <li key={idx}>
-            <strong>{v.name}:</strong> {v.pattern} ({v.tipo})
-          </li>
-        ))}
-      </ul>
-    </div>
-  );
-};
-
+  };
 
   return (
     <main className="p-4 space-y-4 max-w-xl mx-auto">
@@ -235,9 +216,7 @@ if (!isFinite(openY)) {
           mercado.
         </p>
       ) : (
-        <p className="italic text-gray-500">
-          ⏳ Esperando datos del backend...
-        </p>
+        <p className="italic text-gray-500">⏳ Esperando datos del backend...</p>
       )}
 
       {contexto && (
