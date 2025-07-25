@@ -81,7 +81,7 @@ const renderCandlestickChart = () => {
   const formattedData = senal.velas_patrones.map((v, index) => ({
     ...v,
     index,
-    name: v.time?.slice(11, 16),
+    name: v.time?.slice(11, 16), // etiqueta de hora
     color: v.close >= v.open ? "#4caf50" : "#f44336",
   }));
 
@@ -93,15 +93,6 @@ const renderCandlestickChart = () => {
       const highY = y(payload.high);
       const lowY = y(payload.low);
 
-      if (!isFinite(openY)) {
-        console.error("❗ openY es NaN o Infinity por:", {
-          open: payload.open,
-          escalaY: y,
-          yScale: y?.domain?.(),
-          payload,
-        });
-      }
-
       if (
         !isFinite(centerX) || !isFinite(openY) || !isFinite(closeY) ||
         !isFinite(highY) || !isFinite(lowY)
@@ -112,7 +103,8 @@ const renderCandlestickChart = () => {
           openY,
           closeY,
           highY,
-          lowY
+          lowY,
+          yScale: y?.domain?.(), // muestra si existe dominio en escala Y
         });
         return null;
       }
@@ -151,6 +143,7 @@ const renderCandlestickChart = () => {
           margin={{ top: 10, right: 30, bottom: 0, left: 0 }}
         >
           <XAxis dataKey="name" type="category" />
+
           <YAxis
             yAxisId="right"
             type="number"
@@ -160,8 +153,9 @@ const renderCandlestickChart = () => {
             ]}
           />
 
-          {/* Eje invisible para permitir la escala */}
+          {/* Línea invisible para que Recharts calcule escala Y */}
           <line
+            type="monotone"
             dataKey="close"
             yAxisId="right"
             stroke="transparent"
@@ -172,6 +166,7 @@ const renderCandlestickChart = () => {
             formatter={(value, name) => [value, name.toUpperCase()]}
             labelFormatter={(label) => `⏰ ${label}`}
           />
+
           <Customized
             component={({ xAxisMap, yAxisMap }) => {
               const xKey = Object.keys(xAxisMap)[0];
@@ -180,7 +175,7 @@ const renderCandlestickChart = () => {
               const yScale = yAxisMap[yKey]?.scale;
 
               if (!xScale || !yScale) {
-                console.warn("❌ Escalas no disponibles:", { xScale, yScale });
+                console.error("❌ No se pudo obtener escalas x/y");
                 return null;
               }
 
