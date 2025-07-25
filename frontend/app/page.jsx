@@ -86,53 +86,53 @@ const renderCandlestickChart = () => {
     color: v.close >= v.open ? "#4caf50" : "#f44336",
   }));
 
-  const CustomCandle = ({ x, y, payload }) => {
-    try {
-      const centerX = x(payload.name);
-      const openY = y(payload.open);
-      const closeY = y(payload.close);
-      const highY = y(payload.high);
-      const lowY = y(payload.low);
+const CustomCandle = ({ x, y, payload }) => {
+  try {
+    const centerX = x(payload.name);
+    const openY = y(payload.open);
+    const closeY = y(payload.close);
+    const highY = y(payload.high);
+    const lowY = y(payload.low);
 
-      if (
-        !isFinite(centerX) || !isFinite(openY) || !isFinite(closeY) ||
-        !isFinite(highY) || !isFinite(lowY)
-      ) {
-        console.warn("⛔ Coordenadas inválidas para vela:", {
-          payload,
-          centerX,
-          openY,
-          closeY,
-          highY,
-          lowY,
-        });
-        return null;
-      }
-
-      return (
-        <g>
-          <line
-            x1={centerX}
-            x2={centerX}
-            y1={highY}
-            y2={lowY}
-            stroke={payload.color}
-            strokeWidth={1}
-          />
-          <rect
-            x={centerX - 3}
-            y={Math.min(openY, closeY)}
-            width={6}
-            height={Math.max(1, Math.abs(closeY - openY))}
-            fill={payload.color}
-          />
-        </g>
-      );
-    } catch (err) {
-      console.error("❌ Error renderizando vela:", err);
+    if (
+      !isFinite(centerX) || !isFinite(openY) || !isFinite(closeY) ||
+      !isFinite(highY) || !isFinite(lowY)
+    ) {
+      console.error("⛔ Coordenadas inválidas para vela:", {
+        payload,
+        centerX,
+        openY,
+        closeY,
+        highY,
+        lowY
+      });
       return null;
     }
-  };
+
+    return (
+      <g>
+        <line
+          x1={centerX}
+          x2={centerX}
+          y1={highY}
+          y2={lowY}
+          stroke={payload.color}
+          strokeWidth={1}
+        />
+        <rect
+          x={centerX - 3}
+          y={Math.min(openY, closeY)}
+          width={6}
+          height={Math.max(1, Math.abs(closeY - openY))}
+          fill={payload.color}
+        />
+      </g>
+    );
+  } catch (error) {
+    console.error("⚠️ Error al renderizar vela:", { error, payload });
+    return null;
+  }
+};
 
   return (
     <div className="border rounded p-4 shadow bg-white">
