@@ -143,7 +143,7 @@ const renderCandlestickChart = () => {
           margin={{ top: 10, right: 30, bottom: 0, left: 0 }}
         >
           <XAxis dataKey="name" type="category" />
-       <YAxis
+    
 <YAxis
   yAxisId="right"
   type="number"
