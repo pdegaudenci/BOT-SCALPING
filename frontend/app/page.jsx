@@ -143,13 +143,14 @@ const renderCandlestickChart = () => {
           margin={{ top: 10, right: 30, bottom: 0, left: 0 }}
         >
           <XAxis dataKey="name" type="category" />
-         <YAxis
+       <YAxis
   yAxisId="right"
   domain={[
-    (dataMin: number) => Math.floor(dataMin - 1),
-    (dataMax: number) => Math.ceil(dataMax + 1),
+    (dataMin) => Math.floor(dataMin - 1),
+    (dataMax) => Math.ceil(dataMax + 1),
   ]}
 />
+
 
           <Tooltip
             formatter={(value, name) => [value, name.toUpperCase()]}
@@ -159,6 +160,7 @@ const renderCandlestickChart = () => {
   component={({ xAxisMap, yAxisMap }) => {
     const xScale = xAxisMap[Object.keys(xAxisMap)[0]]?.scale;
     const yScale = yAxisMap["right"]?.scale;
+    console.log("xScale", xScale?.domain?.(), "yScale", yScale?.domain?.());
 
     if (!xScale || !yScale) return null;
 
