@@ -144,7 +144,9 @@ const renderCandlestickChart = () => {
         >
           <XAxis dataKey="name" type="category" />
        <YAxis
+<YAxis
   yAxisId="right"
+  type="number"
   domain={[
     (dataMin) => Math.floor(dataMin - 1),
     (dataMax) => Math.ceil(dataMax + 1),
@@ -152,15 +154,25 @@ const renderCandlestickChart = () => {
 />
 
 
+
           <Tooltip
             formatter={(value, name) => [value, name.toUpperCase()]}
             labelFormatter={(label) => `⏰ ${label}`}
           />
- <Customized
+<Customized
   component={({ xAxisMap, yAxisMap }) => {
-    const xScale = xAxisMap[Object.keys(xAxisMap)[0]]?.scale;
-    const yScale = yAxisMap["right"]?.scale;
-    console.log("xScale", xScale?.domain?.(), "yScale", yScale?.domain?.());
+    const xKey = Object.keys(xAxisMap)[0];
+    const yKey = "right"; // coincide con yAxisId
+    const xScale = xAxisMap[xKey]?.scale;
+    const yScale = yAxisMap[yKey]?.scale;
+if (!isFinite(openY)) {
+  console.error("❗ openY es NaN por:", {
+    open: payload.open,
+    escalaY: y,
+    yScale,
+    payload,
+  });
+}
 
     if (!xScale || !yScale) return null;
 
@@ -173,6 +185,7 @@ const renderCandlestickChart = () => {
     );
   }}
 />
+
 
         </ComposedChart>
       </ResponsiveContainer>
