@@ -94,8 +94,8 @@ const renderCandlestickChart = () => {
       const lowY = y(payload.low);
 
       if (
-        !isFinite(centerX) || !isFinite(openY) || !isFinite(closeY) ||
-        !isFinite(highY) || !isFinite(lowY)
+        !isFinite(centerX) || !isFinite(openY) ||
+        !isFinite(closeY) || !isFinite(highY) || !isFinite(lowY)
       ) {
         console.error("⛔ Coordenadas inválidas para vela:", {
           payload,
@@ -104,7 +104,7 @@ const renderCandlestickChart = () => {
           closeY,
           highY,
           lowY,
-          yScale: y?.domain?.(), // muestra si existe dominio en escala Y
+          yScale: y.domain ? y.domain() : y,
         });
         return null;
       }
@@ -153,10 +153,10 @@ const renderCandlestickChart = () => {
             ]}
           />
 
-          {/* Línea invisible para que Recharts calcule escala Y */}
+          {/* Línea invisible para forzar cálculo del dominio Y */}
           <line
             type="monotone"
-            dataKey="close"
+            dataKey="high"
             yAxisId="right"
             stroke="transparent"
             dot={false}
@@ -201,6 +201,7 @@ const renderCandlestickChart = () => {
     </div>
   );
 };
+
 
 
   return (
