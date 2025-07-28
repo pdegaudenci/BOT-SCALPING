@@ -3,9 +3,14 @@ import json
 import openai
 from datetime import datetime
 import traceback
+from dotenv import load_dotenv
+import os
 
-openai.api_key = "TU_API_KEY_AQUI"
-FRONTEND_ORIGIN = "https://bot-scalping.vercel.app"
+load_dotenv()
+
+openai.api_key = os.getenv("OPENAI_API_KEY")
+FRONTEND_ORIGIN = os.getenv("FRONTEND_ORIGIN", "http://localhost:3000")
+
 
 # Datos en memoria
 contexto_actual = {}
