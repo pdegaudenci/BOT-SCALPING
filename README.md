@@ -1,5 +1,4 @@
 
-```markdown
 # 🧠 BOT-SCALPING – Cripto Scalping Asistido por IA
 
 Sistema fullstack que permite recibir señales de trading desde TradingView, analizarlas con un LLM personalizado, y desplegarlas en un dashboard web en tiempo real.
@@ -13,7 +12,7 @@ BOT-SCALPING-main/
 ├── frontend/      # Frontend en React + TailwindCSS con dashboard en tiempo real
 └── vercel.json    # Configuración para despliegue en Vercel
 
-````
+```
 
 ---
 
@@ -91,7 +90,3 @@ Configura variables de entorno en Vercel para proteger claves API y URLs de mode
 
 Pedro Sebastián Degaudenci – Data Engineer & Backend Dev
 
-```
-
-¿Quieres que reemplace el README original o que te lo entregue como archivo descargable `.md`?
-```
